@@ -5,12 +5,6 @@ __pycache__/
 .pytest_cache/
 .playwright-mcp/
 
-# Runtime-generated galleries
-# Keep the checked-in sample gallery; ignore future generated dates.
-imgs/*/
-!imgs/2026-11-08/
-!imgs/2026-11-08/**
-
 # Local editor and OS files
 .vscode/*
 !.vscode/settings.json

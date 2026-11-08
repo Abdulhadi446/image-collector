@@ -2,7 +2,7 @@
 """create.py — single entrypoint for the whole car aura pipeline.
 
 Runs the LangGraph workflow (plan -> harvest -> rate -> save) for one date and
-writes `./imgs/{date}/img-{n}.png`, `car.md` and `car.gif`, prints a short
+writes `./imgs/{date}/img-{n}.jpg`, `car.md` and `car.gif`, prints a short
 summary, and exits 0 only if the full target count was saved.
 
 Usage:
@@ -41,7 +41,7 @@ def main() -> int:
                     help="number of images to save (default: 10)")
     ap.add_argument("--quiet", action="store_true", help="print only the final line")
     ap.add_argument("--skip-if-exists", action="store_true",
-                    help="do nothing if img-1.png already exists for that date")
+                    help="do nothing if img-1.jpg already exists for that date")
     ap.add_argument("--no-checks", action="store_true",
                     help="exit 0 even if fewer than TARGET images were saved")
     ap.add_argument("--no-demo", action="store_true",
@@ -55,7 +55,7 @@ def main() -> int:
     date = args.date
     out = BASE / "imgs" / date
 
-    if args.skip_if_exists and (out / "img-1.png").exists():
+    if args.skip_if_exists and (out / "img-1.jpg").exists():
         if not args.quiet:
             print(f"[skip] {out} already has images")
         return 0

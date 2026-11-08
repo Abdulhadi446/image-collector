@@ -1,4 +1,4 @@
-"""Collect one car's shoot into ./imgs/{date}/img-{n}.png + car.md."""
+"""Collect one car's shoot into ./imgs/{date}/img-{n}.jpg + car.md."""
 import argparse
 import datetime
 

@@ -143,8 +143,8 @@ def save(state: State) -> dict:
         img = Image.open(BytesIO(item["raw"]))
         if img.mode != "RGB":
             img = img.convert("RGB")
-        p = os.path.join(out, f"img-{n}.png")
-        img.save(p, "PNG")
+        p = os.path.join(out, f"img-{n}.jpg")
+        img.save(p, "JPEG", quality=92)
         paths.append(p)
         print(f"  saved {p}  aura={item['aura']} side={item['side']} "
               f"match={item.get('match', True)} real={item.get('real', True)} "

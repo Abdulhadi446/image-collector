@@ -55,7 +55,7 @@ final = build_graph().invoke(
 assert len(final["saved"]) == 6, f"saved {len(final['saved'])}"
 out = os.path.join("imgs", DATE)
 for n in range(1, 7):
-    assert os.path.exists(os.path.join(out, f"img-{n}.png")), f"img-{n} missing"
+    assert os.path.exists(os.path.join(out, f"img-{n}.jpg")), f"img-{n} missing"
 md = open(os.path.join(out, "car.md")).read()
 assert "name: 911 GT3 RS" in md and "company: Porsche" in md
 assert "queries" not in md, "queries must not leak into car.md"
@@ -65,21 +65,21 @@ def pixels(b: bytes) -> bytes:
     return Image.open(io.BytesIO(b)).convert("RGB").tobytes()
 
 
-with open(os.path.join(out, "img-1.png"), "rb") as f:
+with open(os.path.join(out, "img-1.jpg"), "rb") as f:
     assert pixels(f.read()) == pixels(MAP["u7"]), \
         "img-1 must be the best clean match, not watermarked or wrong car"
 for n in range(1, 7):  # watermarked u0 / AI u1 appear nowhere in the output
-    with open(os.path.join(out, f"img-{n}.png"), "rb") as f:
+    with open(os.path.join(out, f"img-{n}.jpg"), "rb") as f:
         b = f.read()
     assert pixels(b) != pixels(MAP["u0"]), f"img-{n} is watermarked"
     assert pixels(b) != pixels(MAP["u1"]), f"img-{n} is not a real photo"
-side2 = Image.open(os.path.join(out, "img-2.png"))
+side2 = Image.open(os.path.join(out, "img-2.jpg"))
 assert side2.size[1] / side2.size[0] >= 1.25, "img-2+ are portrait sides"
-with open(os.path.join(out, "img-2.png"), "rb") as f:
+with open(os.path.join(out, "img-2.jpg"), "rb") as f:
     assert pixels(f.read()) == pixels(MAP["u4"]), \
         "img-2 must be the first matching side angle"
 # fill picks matching u2 (aura 4), never wrong-car u3 (aura 10)
-with open(os.path.join(out, "img-5.png"), "rb") as f:
+with open(os.path.join(out, "img-5.jpg"), "rb") as f:
     assert pixels(f.read()) == pixels(MAP["u2"]), \
         "fill must prefer a matching car over the top-aura wrong car"
 assert os.path.exists(os.path.join(out, "car.gif")), "car.gif missing"

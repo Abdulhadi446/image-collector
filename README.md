@@ -2,12 +2,12 @@
 
 # Car Aura Collector
 
-A **LangGraph** agent that picks one car, hunts its photoshoot across the web, lets **Gemma-4 (Ollama Cloud)** rank every candidate by *aura*, and writes the best 10 as `./imgs/{date}/img-{n}.png`, a `car.md` spec sheet and a looping `car.gif` of the whole set.
+A **LangGraph** agent that picks one car, hunts its photoshoot across the web, lets **Gemma-4 (Ollama Cloud)** rank every candidate by *aura*, and writes the best 10 as `./imgs/{date}/img-{n}.jpg`, a `car.md` spec sheet and a looping `car.gif` of the whole set.
 
 | Hero (best aura, any ratio) | Side angles (mobile/portrait) |
 |---|---|
-| ![hero](imgs/2026-11-08/img-1.png) | ![side](imgs/2026-11-08/img-2.png) |
-| ![side](imgs/2026-11-08/img-5.png) | ![side](imgs/2026-11-08/img-8.png) |
+| ![hero](imgs/2026-11-08/img-1.jpg) | ![side](imgs/2026-11-08/img-2.jpg) |
+| ![side](imgs/2026-11-08/img-5.jpg) | ![side](imgs/2026-11-08/img-8.jpg) |
 
 > Every run is **one car, one shoot, zero duplicates, zero fakes** — perceptual hashing throws out repeats, and Gemma-4 rejects anything AI-generated, rendered or watermarked before it can be saved.
 
@@ -36,7 +36,7 @@ flowchart LR
     D -- yes --> X
     D -- no --> E[Gemma-4:<br/>aura + side + match<br/>+ watermark + real?]
     E --> F[non-real (AI/render) dropped<br/>hero = max aura, match first<br/>sides = portrait first<br/>watermarked sink to the back]
-    F --> G[imgs/date/img-n.png<br/>+ car.md + car.gif]
+    F --> G[imgs/date/img-n.jpg<br/>+ car.md + car.gif]
 ```
 
 ## Install
@@ -86,7 +86,7 @@ rater (gemma4) scoring 68 images...
   best aura=9 portrait=False side=True
   dropped 33 AI-generated / rendered / non-real candidates
   note: only 2 matching portrait sides, filled to 10 with best remaining angles
-  saved .../img-1.png  aura=9 side=True match=True real=True watermark=False
+  saved .../img-1.jpg  aura=9 side=True match=True real=True watermark=False
   ...
   wrote imgs/2026-11-08/car.md
   wrote imgs/2026-11-08/car.gif (10 frames)
@@ -98,10 +98,10 @@ Done: 10/10 images in ./imgs/2026-11-08/
 ```text
 imgs/
 └── 2026-11-08/
-    ├── img-1.png     ← hero shot: highest aura, any aspect ratio
-    ├── img-2.png     ← side angles of the same car: portrait / mobile aspect first
+    ├── img-1.jpg     ← hero shot: highest aura, any aspect ratio
+    ├── img-2.jpg     ← side angles of the same car: portrait / mobile aspect first
     ├── ...
-    ├── img-10.png
+    ├── img-10.jpg
     ├── car.md        ← spec sheet of the car in this shoot
     └── car.gif       ← every saved image, looping (900ms per frame)
 ```
@@ -150,7 +150,7 @@ sequenceDiagram
 | File | Role |
 |---|---|
 | `main.py` | CLI entry (`--date`, `--target`) |
-| `workflow.py` | LangGraph `StateGraph`: plan → harvest → rate → save (`img-*.png` + `car.md` + `car.gif`) |
+| `workflow.py` | LangGraph `StateGraph`: plan → harvest → rate → save (`img-*.jpg` + `car.md` + `car.gif`) |
 | `planner.py` | car planner using Ollama model `beam` (5-car random fallback pool on failure) |
 | `image_search.py` | ddgs search, download, quality filters, watermark + AI-site blocklist, perceptual-hash dedupe |
 | `rater.py` | Gemma-4 vision scoring (aura + side-angle + same-car match + watermark + real-photo flags), batched with retries |

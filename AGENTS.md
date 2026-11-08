@@ -3,7 +3,7 @@
 Python LangGraph car-photo collector + a "Vista Cars" Flask gallery.
 
 ## Fast commands
-- Full shoot: `.venv/bin/python create.py --date YYYY-MM-DD --target 10` (writes `./imgs/<date>/img-*.png`, `car.md`, `car.gif`; refreshes `assets/demo.gif`).
+- Full shoot: `.venv/bin/python create.py --date YYYY-MM-DD --target 10` (writes `./imgs/<date>/img-*.jpg`, `car.md`, `car.gif`; refreshes `assets/demo.gif`).
 - Skip when already downloaded: `.venv/bin/python create.py --date YYYY-MM-DD --skip-if-exists --quiet`.
 - Gallery server: `.venv/bin/python app.py --port 5000`.
 - Setup: `.venv/bin/pip install -r requirements.txt`, with `OLLAMA_API_KEY` in `.env`.
