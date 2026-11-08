@@ -62,7 +62,12 @@ assert "queries" not in md, "queries must not leak into car.md"
 # img-1 = best CLEAN match (u7); watermarked u0 (aura 9) and wrong car
 # u3 (aura 10) must both lose
 def pixels(b: bytes) -> bytes:
-    return Image.open(io.BytesIO(b)).convert("RGB").tobytes()
+    # workflow saves as JPEG (quality 92), so round-trip through the same
+    # lossy step before comparing - byte identity is otherwise impossible
+    im = Image.open(io.BytesIO(b)).convert("RGB")
+    buf = io.BytesIO()
+    im.save(buf, "JPEG", quality=92)
+    return Image.open(io.BytesIO(buf.getvalue())).convert("RGB").tobytes()
 
 
 with open(os.path.join(out, "img-1.jpg"), "rb") as f:
