@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}{{ shoot.company }} {{ shoot.name }} Photos, Specs & GIF — Vista Cars{% endblock %}
+{% block meta_description %}{{ shoot.description if shoot.description else (shoot.title ~ ', captured in ' ~ shoot.date_label) }} Ranked frames, specs, dimensions and offline-ready download links.{% endblock %}
+{% block meta_keywords %}Vista Cars, {{ shoot.company }}, {{ shoot.name }}, car photoshoot, {{ (shoot.car.get('variant') if shoot.car else '') }}, {{ (shoot.car.get('version') if shoot.car else '') }}, {{ (shoot.car.get('color') if shoot.car else '') }}, {{ (shoot.car.get('year') if shoot.car else '') }}, car imagery{% endblock %}
+{% block og_type %}article{% endblock %}
+{% block og_image %}{{ root }}{{ shoot.cover.url if shoot.cover else url_for('static', filename='favicon.svg') }}{% endblock %}
+{% block og_image_alt %}{{ shoot.cover.alt if shoot.cover else (shoot.company ~ ' ' ~ shoot.name) }}{% endblock %}
+{% block jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Car",
+  "name": {{ (shoot.company ~ ' ' ~ shoot.name) | tojson }},
+  "brand": { "@type": "Brand", "name": {{ shoot.company | tojson }} },
+  "model": {{ shoot.name | tojson }},
+  "description": {{ (shoot.description if shoot.description else shoot.title) | tojson }},
+  "color": {{ (shoot.car.get('color') if shoot.car else '') | tojson }},
+  "modelDate": {{ (shoot.car.get('year') if shoot.car else '') | tojson }},
+  "vehicleConfiguration": {{ ((shoot.car.get('variant') if shoot.car else '') or (shoot.car.get('version') if shoot.car else '')) | tojson }},
+  "url": {{ (root ~ url_for('shoot', date=shoot.date)) | tojson }},
+  "image": [
+    {% for image in shoot.images %}{
+      "@type": "ImageObject",
+      "contentUrl": {{ (root ~ image.url) | tojson }},
+      "url": {{ (root ~ image.url) | tojson }},
+      "width": {{ image.width if image.width else 'null' }},
+      "height": {{ image.height if image.height else 'null' }},
+      "caption": {{ image.alt | tojson }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ],
+  "subjectOf": {
+    "@type": "WebPage",
+    "name": {{ shoot.title | tojson }},
+    "url": {{ (root ~ url_for('shoot', date=shoot.date)) | tojson }}
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="shoot-hero">
+  {% if shoot.cover %}
+  <div class="shoot-hero__media">
+    <img src="{{ shoot.cover.url }}" alt="{{ shoot.cover.alt }}" fetchpriority="high">
+  </div>
+  {% endif %}
+  <div class="hero__shade shoot-hero__shade" aria-hidden="true"></div>
+
+  <a class="back mono" href="{{ url_for('index') }}#archive"><span aria-hidden="true">←</span> All shoots</a>
+
+  <div class="shoot-hero__inner page">
+    <p class="kicker mono">{{ shoot.date_label }} <span class="dot"></span> {{ shoot.company or "Unknown make" }} <span class="dot"></span> {{ "%02d"|format(shoot.count) }} frames</p>
+    <h1 class="display">{{ shoot.name }}<span class="accent">.</span></h1>
+    {% if shoot.subline %}<p class="shoot-hero__sub mono">{{ shoot.subline }}</p>{% endif %}
+
+    {% if shoot.chips %}
+    <div class="chips">
+      {% for chip in shoot.chips %}<span class="chip mono">{{ chip.label }} · {{ chip.value }}</span>{% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="shoot-hero__actions">
+      {% if shoot.cover %}
+      <button class="btn btn--accent" type="button" data-open-frame="{{ shoot.cover_index }}">View full frame <span class="arr" aria-hidden="true">↗</span></button>
+      <a class="btn btn--ghost" href="{{ shoot.cover.url }}" download>Download hero <span class="arr" aria-hidden="true">↓</span></a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<section class="sheet page">
+  <div class="sheet__spec">
+    <span class="label mono">Specification</span>
+    <dl class="spec-table">
+      {% for row in shoot.specs %}
+      <div class="spec-row">
+        <dt class="mono">{{ row.label }}</dt>
+        <dd>{{ row.value }}</dd>
+      </div>
+      {% endfor %}
+    </dl>
+  </div>
+
+  <div class="sheet__copy">
+    <span class="label mono">The subject</span>
+    {% if shoot.description %}
+    <p class="lede">{{ shoot.description }}</p>
+    {% else %}
+    <p class="lede">{{ shoot.title }}, captured in {{ shoot.date_label }}.</p>
+    {% endif %}
+    <p class="sheet__body">Every frame below was pulled from the open web, filtered for resolution and watermarks, checked against the frames already kept, then scored for aura by a vision model. The hero is the highest-scoring match; the rest are the angles that survived.</p>
+    <div class="sheet__meta">
+      <span class="mono">{{ "%02d"|format(shoot.count) }} frames</span>
+      <span class="mono">{{ shoot.bytes|filesizeformat }} on disk</span>
+      <span class="mono">Aura ranked</span>
+    </div>
+    <a class="arrow-link" href="{{ url_for('api_shoot', date=shoot.date) }}">Shoot JSON <span aria-hidden="true">↗</span></a>
+  </div>
+</section>
+
+<section class="gallery-section page">
+  <header class="section-head reveal">
+    <div>
+      <span class="label mono">Contact sheet — {{ shoot.date }}</span>
+      <h2 class="display">Every <em>frame.</em></h2>
+    </div>
+    <p class="section-note">Click any frame to open it full screen. Arrow keys move through the set; <span class="mono">esc</span> closes it.</p>
+  </header>
+
+  <div class="masonry">
+    {% for image in shoot.images %}
+    <figure class="shot reveal">
+      <button class="shot__btn" type="button" data-open-frame="{{ loop.index0 }}" aria-label="Open frame {{ loop.index }} of {{ shoot.count }}">
+        <img src="{{ image.url }}" alt="{{ image.alt }}" width="{{ image.width }}" height="{{ image.height }}" loading="lazy">
+        <span class="shot__num mono">FRAME {{ "%02d"|format(loop.index) }}</span>
+        <span class="shot__hint mono">Open ↗</span>
+      </button>
+    </figure>
+    {% endfor %}
+  </div>
+</section>
+
+{% if newer or older %}
+<nav class="shoot-nav page" aria-label="More shoots">
+  {% if newer %}
+  <a class="shoot-nav__item" href="{{ url_for('shoot', date=newer.date) }}">
+    <span class="mono">← Newer shoot</span>
+    <strong>{{ newer.title }}</strong>
+  </a>
+  {% else %}<span></span>{% endif %}
+  {% if older %}
+  <a class="shoot-nav__item shoot-nav__item--right" href="{{ url_for('shoot', date=older.date) }}">
+    <span class="mono">Older shoot →</span>
+    <strong>{{ older.title }}</strong>
+  </a>
+  {% endif %}
+</nav>
+{% endif %}
+
+<script type="application/json" id="gallery-data">{{ shoot.images|tojson }}</script>
+
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer" hidden>
+  <div class="lightbox__bar">
+    <span class="mono" data-lb-count>01 / {{ "%02d"|format(shoot.count) }}</span>
+    <span class="mono lightbox__name" data-lb-name>{{ shoot.cover.filename if shoot.cover }}</span>
+    <div class="lightbox__tools">
+      <a class="mono" data-lb-download href="#" download>Download</a>
+      <button class="mono" type="button" data-lb-close aria-label="Close image viewer">Close ✕</button>
+    </div>
+  </div>
+
+  <div class="lightbox__stage">
+    <button class="lightbox__nav lightbox__nav--prev" type="button" data-lb-prev aria-label="Previous frame">←</button>
+    <img data-lb-img src="" alt="">
+    <button class="lightbox__nav lightbox__nav--next" type="button" data-lb-next aria-label="Next frame">→</button>
+    <p class="lightbox__caption mono" data-lb-caption></p>
+  </div>
+</div>
+{% endblock %}

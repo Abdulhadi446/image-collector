@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}404 — Page Not Found · Vista Cars{% endblock %}
+{% block meta_description %}That page is no longer in the Vista Cars archive. Return to the car archive to browse current shoots.{% endblock %}
+{% block meta_robots %}noindex, nofollow{% endblock %}
+
+{% block content %}
+<section class="error-page page">
+  <p class="label mono">Error 404</p>
+  <h1 class="display">Lost the <em>apex.</em></h1>
+  <p class="error-page__body">That frame isn't in the archive. The shoot you're after may have been moved, or never collected.</p>
+  <div class="error-page__actions">
+    <a class="btn btn--accent" href="{{ url_for('index') }}">Back to the archive <span class="arr" aria-hidden="true">↗</span></a>
+  </div>
+</section>
+{% endblock %}

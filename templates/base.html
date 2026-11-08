@@ -1,0 +1,113 @@
+{% set root = request.url_root.rstrip('/') %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Vista Cars — Car Archive{% endblock %}</title>
+  {% set page_description = self.meta_description()|trim %}
+  <meta name="description" content="{{ page_description or 'Vista Cars — a local-first archive of car photoshoots: ranked frames, full spec sheets and looping GIFs.' }}">
+  <meta name="keywords" content="{% block meta_keywords %}Vista Cars, car archive, car photoshoot, ranked car photography, car spec sheet, car GIFs{% endblock %}">
+  <meta name="robots" content="{% block meta_robots %}index, follow, max-snippet:-1, max-image-preview:large{% endblock %}">
+  <meta name="theme-color" content="#08090b">
+  <link rel="canonical" href="{% block canonical %}{{ root }}{{ request.path }}{% endblock %}">
+  <meta property="og:site_name" content="Vista Cars">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+  <meta property="og:title" content="{% block og_title %}{{ self.title()|trim }}{% endblock %}">
+  <meta property="og:description" content="{{ page_description or 'Vista Cars — a local-first archive of car photoshoots.' }}">
+  <meta property="og:url" content="{{ root }}{{ request.path }}">
+  <meta property="og:image" content="{% block og_image %}{{ root }}{{ url_for('static', filename='favicon.svg') }}{% endblock %}">
+  <meta property="og:image:alt" content="{% block og_image_alt %}Vista Cars branding mark{% endblock %}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ self.title()|trim }}">
+  <meta name="twitter:description" content="{{ page_description or 'Vista Cars — a local-first archive of car photoshoots.' }}">
+  <meta name="twitter:image" content="{{ self.og_image()|trim }}">
+  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+  <link rel="sitemap" type="application/xml" href="{{ root }}/sitemap.xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@id": "{{ root }}/#organization",
+        "@type": "Organization",
+        "name": "Vista Cars",
+        "url": "{{ root }}/",
+        "logo": "{{ root }}{{ url_for('static', filename='favicon.svg') }}"
+      },
+      {
+        "@type": "WebSite",
+        "name": "Vista Cars",
+        "url": "{{ root }}/",
+        "description": "Local-first archive of car photoshoots: ranked frames, spec sheets and looping GIFs.",
+        "publisher": { "@id": "{{ root }}/#organization" }
+      }
+    ]
+  }
+  </script>
+  {% block jsonld %}{% endblock %}
+  <script>document.documentElement.classList.add('js');</script>
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="site-head" id="siteHead">
+    <a class="brand" href="{{ url_for('index') }}" aria-label="Vista Cars home">
+      <span class="brand__mark" aria-hidden="true">V</span>
+      <span class="brand__text"><strong>VISTA</strong><span>Cars</span></span>
+    </a>
+
+    <nav class="nav" aria-label="Main">
+      <a href="{{ url_for('index') }}#archive" class="{{ 'is-active' if active == 'archive' }}"><span>01</span>Archive</a>
+      <a href="{{ url_for('motion') }}" class="{{ 'is-active' if active == 'motion' }}"><span>02</span>Motion</a>
+      <a href="{{ url_for('index') }}#pipeline"><span>03</span>Pipeline</a>
+    </nav>
+
+    <div class="head-meta mono">Local only <span class="dot"></span> {{ now_year|default(2026) }}</div>
+  </header>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-foot">
+    <div class="foot-top">
+      <p class="foot-line">Shot, ranked,<br><em>archived.</em></p>
+      <div class="foot-cols">
+        <div class="foot-col">
+          <h4>Archive</h4>
+          <a href="{{ url_for('index') }}#archive">Shoots</a>
+          <a href="{{ url_for('motion') }}">Motion</a>
+          <a href="{{ url_for('index') }}#pipeline">Pipeline</a>
+        </div>
+        <div class="foot-col">
+          <h4>Machine</h4>
+          <a href="{{ url_for('api_shoots') }}">JSON API</a>
+          <a href="{{ url_for('healthz') }}">Health</a>
+          <a href="{{ url_for('api_shoots') }}">Raw data</a>
+        </div>
+        <div class="foot-col">
+          <h4>Built with</h4>
+          <span>Flask</span>
+          <span>LangGraph</span>
+          <span>Gemma-4</span>
+        </div>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span class="mono">© {{ now_year|default(2026) }} Vista Cars</span>
+      <span class="mono">One car · one shoot · zero duplicates</span>
+      <span class="mono">Runs on this machine</span>
+    </div>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+</body>
+</html>
+
+EOF

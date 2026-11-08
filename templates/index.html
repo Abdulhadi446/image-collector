@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+{% block title %}Vista Cars — Car Archive{% if featured %} · {{ featured.name }}{% endif %}{% endblock %}
+{% block meta_description %}Vista Cars archive of ranked car photoshoots, spec sheets and looping GIFs. Latest shoot: {{ featured.title if featured else 'Vista Cars' }}{% if featured and (featured.description or featured.subline) %} — {{ featured.description if featured.description else featured.subline }}{% endif %} Frames: {{ (featured.count if featured else 0) }}.{% endblock %}
+{% block meta_keywords %}Vista Cars, car archive, car photoshoot{% if shoots %}, {{ shoots|map(attribute='title')|join(', ') }}{% endif %}, ranked car photography, car spec sheet, looping car GIF{% endblock %}
+{% block og_type %}website{% endblock %}
+{% block og_image %}{{ root }}{{ featured.cover.url if featured and featured.cover else url_for('static', filename='favicon.svg') }}{% endblock %}
+{% block og_image_alt %}{{ featured.cover.alt if featured and featured.cover else 'Vista Cars' }}{% endblock %}
+{% block jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "name": "Vista Cars photo archive",
+  "description": "Ranked car photoshoot frames with full specification sheets.",
+  "numberOfItems": {{ shoots|length }},
+  "itemListElement": [
+    {% for shoot in shoots %}{
+      "@type": "ListItem",
+      "position": {{ loop.index }},
+      "name": {{ shoot.title | tojson }},
+      "url": {{ (root ~ url_for('shoot', date=shoot.date)) | tojson }}
+      {% if shoot.cover %}, "image": {{ (root ~ shoot.cover.url) | tojson }}{% endif %}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+{% if featured %}
+<section class="hero">
+  <div class="hero__media">
+    <img src="{{ featured.cover.url }}" alt="{{ featured.cover.alt }}" fetchpriority="high">
+  </div>
+  <div class="hero__shade" aria-hidden="true"></div>
+
+  <div class="hero__inner page">
+    <p class="hero__eyebrow mono"><span class="pulse" aria-hidden="true"></span> Latest shoot — {{ featured.date_label }} — {{ "%02d"|format(featured.count) }} frames</p>
+    <h1 class="hero__title">Cars with<br><em>aura<span class="accent">.</span></em></h1>
+    <p class="hero__lede">One car per run, hunted across the web and ranked by a vision model that knows a good angle when it sees one. This is the archive.</p>
+    <div class="hero__actions">
+      <a class="btn btn--accent" href="{{ url_for('shoot', date=featured.date) }}">Open the shoot <span class="arr" aria-hidden="true">↗</span></a>
+      <a class="btn btn--ghost" href="#motion">Watch the showreel <span class="arr" aria-hidden="true">↓</span></a>
+    </div>
+    <div class="hero__foot">
+      <dl class="hero__specs">
+        {% for chip in featured.chips %}
+        <div><dt class="mono">{{ chip.label }}</dt><dd>{{ chip.value }}</dd></div>
+        {% endfor %}
+        <div><dt class="mono">Car</dt><dd>{{ featured.company }}</dd></div>
+      </dl>
+      <div class="scroll-cue mono" aria-hidden="true">Scroll <span></span></div>
+    </div>
+  </div>
+</section>
+{% else %}
+<section class="hero hero--empty">
+  <div class="hero__shade" aria-hidden="true"></div>
+  <div class="hero__inner page">
+    <p class="hero__eyebrow mono"><span class="pulse" aria-hidden="true"></span> Archive empty</p>
+    <h1 class="hero__title">Cars with<br><em>aura<span class="accent">.</span></em></h1>
+    <p class="hero__lede">No shoots on disk yet. Run the collector and the archive will fill itself.</p>
+    <div class="hero__actions">
+      <code class="code-pill">.venv/bin/python main.py</code>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<div class="ticker" aria-hidden="true">
+  <div class="ticker__track">
+    {% for _ in range(2) %}
+    <div class="ticker__set">
+      <span>One car</span><i>✦</i><span>One shoot</span><i>✦</i><span>Zero duplicates</span><i>✦</i>
+      <span>Aura ranked</span><i>✦</i><span>Portrait sides first</span><i>✦</i><span>Local-first</span><i>✦</i>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<section class="stats" aria-label="Archive statistics">
+  <div class="stat">
+    <span class="stat__num">{{ "%02d"|format(stats.shoots) }}</span>
+    <span class="stat__label mono">Shoots</span>
+  </div>
+  <div class="stat">
+    <span class="stat__num">{{ "%02d"|format(stats.frames) }}</span>
+    <span class="stat__label mono">Frames archived</span>
+  </div>
+  <div class="stat">
+    <span class="stat__num">{{ "%02d"|format(stats.cars) }}</span>
+    <span class="stat__label mono">Cars captured</span>
+  </div>
+  <div class="stat">
+    <span class="stat__num">{{ "%02d"|format(stats.loops) }}</span>
+    <span class="stat__label mono">Motion loops</span>
+  </div>
+</section>
+
+<section class="section page" id="archive">
+  <header class="section-head reveal">
+    <div>
+      <span class="label mono">01 — Archive</span>
+      <h2 class="display">The <em>archive.</em></h2>
+    </div>
+    <p class="section-note">Each run is one car, one shoot. Ten frames survive the filter: sharp enough, clean enough, and never a duplicate of one already kept.</p>
+  </header>
+
+  {% if shoots %}
+  <div class="shoot-list">
+    {% for shoot in shoots %}
+    <article class="shoot-row reveal {{ 'shoot-row--flip' if loop.index is even }}">
+      <a class="shoot-row__media" href="{{ url_for('shoot', date=shoot.date) }}" aria-label="Open the {{ shoot.title }} shoot">
+        {% if shoot.cover %}
+        <img src="{{ shoot.cover.url }}" alt="{{ shoot.cover.alt }}" width="{{ shoot.cover.width }}" height="{{ shoot.cover.height }}" loading="lazy">
+        {% endif %}
+        <span class="shoot-row__count mono">{{ "%02d"|format(shoot.count) }} frames</span>
+        <span class="shoot-row__open mono">View gallery ↗</span>
+      </a>
+      <div class="shoot-row__body">
+        <p class="kicker mono">{{ shoot.date_label }} <span class="dot"></span> {{ shoot.company or "Unknown make" }}</p>
+        <h3><a href="{{ url_for('shoot', date=shoot.date) }}">{{ shoot.name }}</a></h3>
+        {% if shoot.subline %}<p class="shoot-row__sub mono">{{ shoot.subline }}</p>{% endif %}
+        {% if shoot.description %}<p class="shoot-row__desc">{{ shoot.description }}</p>{% endif %}
+
+        {% if shoot.mini %}
+        <dl class="mini-specs">
+          {% for row in shoot.mini %}
+          <div><dt class="mono">{{ row.label }}</dt><dd>{{ row.value }}</dd></div>
+          {% endfor %}
+        </dl>
+        {% endif %}
+
+        {% if shoot.thumbs %}
+        <div class="shoot-row__thumbs" aria-hidden="true">
+          {% for thumb in shoot.thumbs %}
+          <img src="{{ thumb.url }}" alt="" loading="lazy">
+          {% endfor %}
+          <span class="mono">+ {{ shoot.count - 1 }} more</span>
+        </div>
+        {% endif %}
+
+        <a class="arrow-link" href="{{ url_for('shoot', date=shoot.date) }}">Open the shoot <span aria-hidden="true">→</span></a>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">
+    <p class="empty__title">Nothing in the archive yet.</p>
+    <p class="empty__body">Run <code>.venv/bin/python main.py</code> to collect the first car, then reload this page.</p>
+  </div>
+  {% endif %}
+</section>
+
+<section class="section section--motion" id="motion">
+  <div class="page">
+    <div class="reel reveal">
+      {% if gif %}
+      <a class="reel__frame" href="{{ gif.url }}" target="_blank" rel="noopener" aria-label="Open {{ gif.filename }} at full size">
+        <img src="{{ gif.url }}" alt="{{ gif.alt }}">
+        <span class="reel__chrome mono"><span class="rec" aria-hidden="true"></span> SHOWREEL_001 <span>{{ gif.width }}×{{ gif.height }}</span></span>
+      </a>
+      {% else %}
+      <div class="reel__frame reel__frame--empty">
+        <span class="mono">No GIFs in /assets</span>
+      </div>
+      {% endif %}
+
+      <div class="reel__copy">
+        <span class="label mono">02 — Motion</span>
+        <h2 class="display">Proof, in <em>motion.</em></h2>
+        <p class="reel__lede">Screen recordings and looping captures from the collector. The frames do the talking; the loop just makes you look twice.</p>
+        {% if gif %}
+        <dl class="reel__meta">
+          <div><dt class="mono">Format</dt><dd>GIF</dd></div>
+          <div><dt class="mono">Frames</dt><dd>{{ gif.frames }}</dd></div>
+          <div><dt class="mono">Loop</dt><dd>{{ "%.1f"|format(gif.seconds) }} s</dd></div>
+          <div><dt class="mono">Size</dt><dd>{{ gif.bytes|filesizeformat }}</dd></div>
+        </dl>
+        {% endif %}
+        <a class="arrow-link" href="{{ url_for('motion') }}">Open the motion archive <span aria-hidden="true">→</span></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section page" id="pipeline">
+  <header class="section-head reveal">
+    <div>
+      <span class="label mono">03 — Pipeline</span>
+      <h2 class="display">How a shoot <em>happens.</em></h2>
+    </div>
+    <p class="section-note">A LangGraph run in four moves: plan one car, harvest the web, score every candidate, keep the ten that earn it.</p>
+  </header>
+
+  <div class="steps">
+    <article class="step reveal">
+      <span class="step__num">01</span>
+      <h3>Plan</h3>
+      <p>Sodeom AI picks one car for the day and writes a set of photoshoot queries around it.</p>
+      <span class="step__tag mono">sodeom /ai</span>
+    </article>
+    <article class="step reveal">
+      <span class="step__num">02</span>
+      <h3>Harvest</h3>
+      <p>DuckDuckGo image search, eight-way parallel downloads, a 640 px floor, watermark domains dropped.</p>
+      <span class="step__tag mono">ddgs</span>
+    </article>
+    <article class="step reveal">
+      <span class="step__num">03</span>
+      <h3>Rate</h3>
+      <p>Gemma-4 scores every survivor for aura, side angle, same-car match, and burned-in watermarks.</p>
+      <span class="step__tag mono">gemma-4</span>
+    </article>
+    <article class="step reveal">
+      <span class="step__num">04</span>
+      <h3>Archive</h3>
+      <p>Hero first, portrait sides next. Perceptual hashing removes repeats before anything is written.</p>
+      <span class="step__tag mono">phash + flask</span>
+    </article>
+  </div>
+</section>
+{% endblock %}

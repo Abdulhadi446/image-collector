@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Car Motion Showreels & GIFs — Vista Cars{% endblock %}
+{% block meta_description %}Vista Cars motion page: looping car GIFs, showreels and screen recordings from the collector. Drop a GIF into assets and it appears here.{% endblock %}
+{% block meta_keywords %}Vista Cars, car GIF, car showreel, looping car animation, motion graphics{% endblock %}
+{% block og_type %}website{% endblock %}
+{% block og_image %}{{ root }}{{ (gifs[0].url if gifs else url_for('static', filename='favicon.svg')) }}{% endblock %}
+{% block og_image_alt %}{{ (gifs[0].alt if gifs else 'Vista Cars motion preview') }}{% endblock %}
+{% block jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "name": "Vista Cars motion loops",
+  "numberOfItems": {{ gifs|length }},
+  "itemListElement": [
+    {% for gif in gifs %}{
+      "@type": "ImageObject",
+      "name": {{ gif.stem | tojson }},
+      "contentUrl": {{ (root ~ gif.url) | tojson }},
+      "width": {{ gif.width or 'null' }},
+      "height": {{ gif.height or 'null' }},
+      "description": {{ gif.alt | tojson }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="page page-head">
+  <span class="label mono">02 — Motion</span>
+  <h1 class="display">The <em>showreel.</em></h1>
+  <div class="page-head__row">
+    <p class="page-head__lede">Screen recordings, looping captures, and animated showreels from the collector — both supplemental loops in <code>/assets</code> and each shoot's <code>car.gif</code>. Drop a GIF in <code>assets/</code> and it appears.</p>
+    <div class="page-head__meta">
+      <span class="mono">{{ "%02d"|format(gifs|length) }} loops</span>
+      <span class="mono">{{ gifs|sum(attribute='bytes')|filesizeformat if gifs else "0 B" }}</span>
+    </div>
+  </div>
+</section>
+
+<section class="page motion-section">
+  {% if gifs %}
+  <div class="motion-grid">
+    {% for gif in gifs %}
+    <article class="gif-card reveal">
+      <a class="gif-card__frame" href="{{ gif.url }}" target="_blank" rel="noopener" style="aspect-ratio: {{ gif.width or 16 }} / {{ gif.height or 9 }};" aria-label="Open {{ gif.filename }} at full size">
+        <img src="{{ gif.url }}" alt="{{ gif.alt }}" loading="{{ 'eager' if loop.first else 'lazy' }}">
+        <span class="rec" aria-hidden="true"></span>
+      </a>
+      <div class="gif-card__meta">
+        <div>
+          <h3>{{ gif.stem }}{% if gif.source == "shoot" %}<span class="mono" style="font-size:.75em;opacity:.7;margin-left:.5rem;">shoot loop</span>{% endif %}</h3>
+          <p class="mono">{{ gif.filename }}{% if gif.source == "shoot" and gif.date %} — <a href="{{ url_for('shoot', date=gif.date) }}">{{ gif.shoot_title }}</a>{% endif %}</p>
+        </div>
+        <dl class="gif-card__specs mono">
+          <div><dt>Size</dt><dd>{{ gif.width }}×{{ gif.height }}</dd></div>
+          <div><dt>Frames</dt><dd>{{ gif.frames }}</dd></div>
+          <div><dt>Loop</dt><dd>{{ "%.1f"|format(gif.seconds) }}s</dd></div>
+          <div><dt>Weight</dt><dd>{{ gif.bytes|filesizeformat }}</dd></div>
+        </dl>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">
+    <p class="empty__title">No motion yet.</p>
+    <p class="empty__body">Drop a <code>.gif</code> into <code>assets/</code> and reload this page. It will be picked up automatically.</p>
+  </div>
+  {% endif %}
+
+  <aside class="motion-note">
+    <span class="label mono">Add a loop</span>
+    <p>Everything in <code>assets/</code> plus each shoot's <code>imgs/&lt;date&gt;/car.gif</code> show up here automatically. No registry, no database.</p>
+    <code class="code-block">cp your-clip.gif assets/</code>
+  </aside>
+</section>
+{% endblock %}
