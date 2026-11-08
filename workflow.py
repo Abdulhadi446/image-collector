@@ -12,7 +12,7 @@ from langgraph.graph import END, START, StateGraph
 
 import image_search as ims
 import rater
-import sodeom
+import planner
 
 
 class State(TypedDict):
@@ -51,9 +51,9 @@ def make_gif(files: list[str], path: str, w: int = 520, h: int = 720,
 
 def plan(state: State) -> dict:
     if not state["car"]:
-        car = sodeom.plan_car()
-        print(f"shoot: {car.get('color')} {car.get('company')} {car.get('name')} "
-              f"({car.get('version')} {car.get('variant')})")
+        car = planner.plan_car()
+        print(f"shoot: {car.get('company')} {car.get('name')} "
+              f"({car.get('version')} {car.get('variant')}, {car.get('color')})")
         return {"car": car, "query": car["queries"][0], "i": 0}
     return {"query": state["car"]["queries"][state["i"]]}
 

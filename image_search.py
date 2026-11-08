@@ -11,13 +11,12 @@ from PIL import Image
 UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/126.0 Safari/537.36")
 MAX_BYTES = 25_000_000
-# stock sites serve watermarked previews (wixmp = deviantart CDN); the second
-# group is AI-art generators — real-photo rule rejects those too, but skip early
+# stock sites serve watermarked previews (wixmp = deviantart CDN;
+# stablediffusionweb = burned-in watermarks). AI-rendered images are filtered
+# downstream by gemma4's "real" flag, on the user's "let it go" preference.
 WATERMARKED = ("freepik", "vecteezy", "shutterstock", "istockphoto",
                "gettyimages", "alamy", "dreamstime", "123rf", "depositphotos",
-               "wixmp", "stablediffusionweb", "civitai", "midjourney",
-               "leonardo.ai", "openart", "nightcafe", "lexica", "artbreeder",
-               "playgroundai", "dezgo")
+               "wixmp", "stablediffusionweb")
 
 
 def search_images(query: str, max_results: int = 25) -> list[str]:

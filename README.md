@@ -15,7 +15,7 @@ A **LangGraph** agent that picks one car, hunts its photoshoot across the web, l
 
 ```mermaid
 flowchart TD
-    START([main.py]) --> plan["🤖 plan<br/>sodeom.com/ai picks ONE car<br/>+ 10+ shoot queries"]
+    START([main.py]) --> plan["🤖 plan<br/>beam (Ollama) picks ONE car<br/>+ shoot queries"]
     plan --> harvest["🔍 harvest<br/>ddgs image search → download 8-way parallel<br/>filter: min 640px, no watermarks, phash dedupe"]
     harvest --> route{"enough<br/>PORTRAIT<br/>candidates?"}
     route -- "no, more queries left" --> advance["➡️ next query"] --> harvest
@@ -75,7 +75,7 @@ Real run output (one example — cars vary between runs; this run fell back to t
 
 ```text
 Collecting 10 images of one car into ./imgs/2026-11-08/ ...
-  sodeom /ai car planning failed (empty answer); using fallback: Toyota Supra GR
+  planner car planning failed (empty answer); using fallback: Toyota Supra GR
 shoot: black Toyota Supra GR (A90 GR)
 [1/11] 'Toyota Supra A90 black photoshoot': 25 urls
   accepted 16 candidates (target 10)
@@ -125,17 +125,17 @@ description: Track-focused 911 with a huge swan-neck rear wing.
 
 | Stage | Who | What it decides |
 |---|---|---|
-| **Plan** | [sodeom.com/ai](https://sodeom.com/ai) | which car to shoot + its search queries |
+| **Plan** | Ollama Cloud `beam` (`/v1/chat/completions`) | which car to shoot + its search queries |
 | **Harvest** | DuckDuckGo (`ddgs`) | which images exist, which are big enough / clean / not duplicates |
 | **Rate** | Gemma-4 via Ollama Cloud (`/v1/chat/completions`) | `aura` (0–10), side angle, same-car `match`, burned-in `watermark`, and `real` (rejects AI/renders/video-game shots) |
 
 ```mermaid
 sequenceDiagram
     participant M as main.py
-    participant S as sodeom /ai
+    participant P as beam (Ollama)
     participant D as ddgs
     participant G as Gemma-4 (Ollama)
-    M->>S: pick one car + queries
+    M->>P: pick one car + queries
     loop each query
         M->>D: search + download
         D-->>M: candidates (deduped)
@@ -151,7 +151,7 @@ sequenceDiagram
 |---|---|
 | `main.py` | CLI entry (`--date`, `--target`) |
 | `workflow.py` | LangGraph `StateGraph`: plan → harvest → rate → save (`img-*.png` + `car.md` + `car.gif`) |
-| `sodeom.py` | car planner over sodeom.com/ai (5-car random fallback pool when /ai is flaky) |
+| `planner.py` | car planner using Ollama model `beam` (5-car random fallback pool on failure) |
 | `image_search.py` | ddgs search, download, quality filters, watermark + AI-site blocklist, perceptual-hash dedupe |
 | `rater.py` | Gemma-4 vision scoring (aura + side-angle + same-car match + watermark + real-photo flags), batched with retries |
 | `test_score.py` | self-check: filters, dedupe, portrait flag |
@@ -166,11 +166,11 @@ sequenceDiagram
 
 ## Notes
 
-- Local CLI — nothing is deployed; run it on your machine.
+- Runs on your machine by default; production domain is documented in the Gallery web app section.
 - DuckDuckGo rate-limits aggressively: the harvest node sleeps between queries and retries on429s.
 - Not enough portrait shots? The saver fills the shortfall with the best remaining angles and prints a note, so you always get `--target` images.
 - **Real photos only**: Gemma-4 flags every candidate as `real` (photo) or not (AI / 3D render / video-game shot) and non-real images are dropped before saving; AI-art sites (civitai, midjourney, leonardo.ai, …) are also blocked at search time.
-- **A different car every run**: sodeom.com/ai picks the car + queries; if /ai is flaky (it intermittently returns empty/truncated bodies) a random car from a 5-car fallback pool (Porsche GT3 RS, Nissan GT-R Nismo, BMW M4, Lamborghini Huracán, Toyota Supra) is used instead — never always the same Porsche.
+- **A different car every run**: Ollama model `beam` picks the car + queries; if `beam` fails or returns unusable JSON, a random car from a 5-car fallback pool (Porsche GT3 RS, Nissan GT-R Nismo, BMW M4, Lamborghini Huracán, Toyota Supra) is used — never always the same Porsche.
 
 ## Gallery web app — Vista Cars
 
@@ -188,10 +188,12 @@ A small Flask app serves the archive everywhere: every shoot under `./imgs/<date
 |---|---|---|
 | Archive | `/` | latest shoot hero, stats, all shoots, motion reel, pipeline |
 | Shoot detail | `/shoot/<date>` | spec sheet, description, lightboxed frame grid, prev/next shoots |
-| Motion | `/motion` | auto-detected `*.gif` loops from `assets/` |
+| Motion | `/motion` | auto-detected shoot `car.gif` loops plus allowed `*.gif` loops from `assets/` (`demo.gif` is excluded) |
 | Shoot JSON | `/api/shoots/<date>` | shoot + car metadata + image list |
 | Health | `/healthz` | `{"ok": true}` |
 
 ![demo](assets/demo.gif)
 
-Files added for the app: `app.py`, `templates/` (base, index, shoot, motion, 404), `static/css/style.css`, `static/js/app.js`, `static/favicon.svg`.
+Files added for the app: `app.py`, `templates/` (base, index, shoot, motion, 404), `static/css/style.css`, `static/js/app.js`, `static/favicon.svg`, plus `LICENSE` (personal use only; no corporate or commercial use).
+
+- **Hero demo gif** — every `create.py` run rebuilds `assets/demo.gif` from that shoot's final images, so README's top-of-page GIF leads the latest batch. Pass `--no-demo` to keep the current hero.

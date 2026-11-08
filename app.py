@@ -260,7 +260,8 @@ def load_gifs() -> list[dict]:
             asset_files = sorted(
                 (p for p in ASSET_ROOT.iterdir()
                  if p.is_file() and p.suffix.lower() in GIF_EXTS
-                 and not p.name.startswith(".")),
+                 and not p.name.startswith(".")
+                 and p.name != "demo.gif"),
                 key=lambda p: natural_key(p.name),
             )
             items.extend(build_gif(path) for path in asset_files)

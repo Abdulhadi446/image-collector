@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw
 
 import image_search as ims
 import rater
-import sodeom
+import planner
 from workflow import build_graph
 
 CAR = {"name": "911 GT3 RS", "company": "Porsche", "version": "992.1",
@@ -32,7 +32,7 @@ def img(w: int, h: int, seed: int) -> bytes:
 MAP = {f"u{i}": img(800, 600, i + 1) for i in range(4)}       # landscape heroes
 MAP.update({f"u{4 + i}": img(720, 1280, i + 10) for i in range(6)})  # portrait sides
 
-sodeom.plan_car = lambda: CAR
+planner.plan_car = lambda: CAR
 ims.search_images = lambda q, max_results=25: list(MAP)
 ims.download = lambda url: MAP[url]
 # wrong cars u3/u6/u9: u3 has the global top aura 10 but match=False;
