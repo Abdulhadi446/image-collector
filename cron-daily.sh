@@ -15,8 +15,10 @@ if ! "$REPO/.venv/bin/python" "$REPO/create.py" --date "$DATE" --target 10; then
     exit 1
 fi
 
-# Stage just the day's images plus the hero GIF and the script
-git add -f "imgs/$DATE" "assets/demo.gif" "cron-daily.sh" >/dev/null 2>&1 || true
+# Stage everything, including the freshly generated (git-ignored-by-default)
+# image folders via a force-add, then verify there is something to push.
+git add -A
+git add -f "imgs/$DATE" "assets/demo.gif" >/dev/null 2>&1 || true
 if git diff --cached --quiet; then
     echo "no new images to commit; skipping push"
     echo "$DATE" > "$CACHE"
