@@ -1,4 +1,4 @@
-"""Image rating via Ollama Cloud (gemma4, vision)."""
+"""Image rating via Jev (TypeSafe System One, typed decisions through DefAPI)."""
 from __future__ import annotations
 
 import base64
@@ -10,21 +10,23 @@ from io import BytesIO
 import requests
 from PIL import Image
 
-URL = "https://ollama.com/v1/chat/completions"
-MODEL = "gemma4"
+URL = "https://api.defapi.org/v1/chat/completions"
+MODEL = "typesafe/jev-1.14.0"
 
 
 def _load_key() -> str:
-    if k := os.environ.get("OLLAMA_API_KEY"):
-        return k
-    try:  # plain KEY=value line in .env next to this file
+    for env in ("JEV_API_KEY", "TYPE_SAFE_API_KEY", "OLLAMA_API_KEY"):
+        if v := os.environ.get(env):
+            return v
+    try:
         with open(os.path.join(os.path.dirname(__file__), ".env")) as f:
             for line in f:
-                if line.startswith("OLLAMA_API_KEY="):
-                    return line.split("=", 1)[1].strip().strip("'\"")
+                for name in ("JEV_API_KEY", "TYPE_SAFE_API_KEY", "OLLAMA_API_KEY"):
+                    if line.startswith(name + "="):
+                        return line.split("=", 1)[1].strip().strip("'\"")
     except OSError:
         pass
-    print("warning: OLLAMA_API_KEY not set (env or .env); ratings will fail")
+    print("warning: JEV_API_KEY not set (env or .env); ratings will fail")
     return ""
 
 
@@ -66,7 +68,8 @@ def _ask(car: dict, images: list[bytes]) -> list[dict] | None:
         "not a toy or scale model); false otherwise. "
         "Reply with ONLY a JSON array, one object per image, same order, no prose: "
         '[{"aura": 0, "side": false, "match": false, "watermark": false, "real": false}]')})
-    r = requests.post(URL, headers={"Authorization": f"Bearer {KEY}"},
+    r = requests.post(URL, headers={"Authorization": f"Bearer {KEY}",
+                                   "TypeSafe-Danger-Zone-Images": "true"},
                       json={"model": MODEL, "max_tokens": 2048,
                             "messages": [{"role": "user", "content": content}]},
                       timeout=120)
