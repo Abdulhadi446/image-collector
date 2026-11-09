@@ -7,7 +7,7 @@ Python LangGraph car-photo collector + a "Vista Cars" Flask gallery.
 - Skip when already downloaded: `.venv/bin/python create.py --date YYYY-MM-DD --skip-if-exists --quiet`.
 - Gallery server: `.venv/bin/python app.py --port 5000`.
 - Setup: `.venv/bin/pip install -r requirements.txt`, with `OLLAMA_API_KEY` in `.env`.
-- Cron (from script docstring): `0 3 * * * cd /path/to/image-collector && .venv/bin/python create.py >> /var/log/car-aura.log 2>&1`
+- Unattended (tests2, systemd user): `vistacars-daily.timer` runs `cron-daily.sh` at 00/06/12/18 UTC (4 slots/day, each writes `imgs/YYYY-MM-DD-HH/`). Local fallback timer (Asia/Karachi) same 4 UTC slots.">
 
 ## Tests
 - `test_score.py` and `test_graph.py` — run with `python test_score.py && python test_graph.py` (offline; test_graph monkey-patches `planner.plan_car`, `image_search.search_images`, `rater.rate`).
