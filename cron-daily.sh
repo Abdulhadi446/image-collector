@@ -25,6 +25,8 @@ if git diff --cached --quiet; then
     exit 0
 fi
 if git commit -m "Addimages for $DATE"; then
+    # origin may have newer commits (e.g. README edits from another machine)
+    git pull --rebase origin master || echo "WARN: pull --rebase failed; pushing anyway"
     git push origin master
     echo "push completed"
 else
