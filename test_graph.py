@@ -30,7 +30,7 @@ def img(w: int, h: int, seed: int) -> bytes:
 
 
 MAP = {f"u{i}": img(800, 600, i + 1) for i in range(4)}       # landscape heroes
-MAP.update({f"u{4 + i}": img(720, 1280, i + 10) for i in range(6)})  # portrait sides
+MAP.update({f"u{4 + i}": img(768, 960, i + 10) for i in range(6)})  # portrait sides (4:5)
 
 planner.plan_car = lambda: CAR
 ims.search_images = lambda q, max_results=25: list(MAP)
@@ -61,31 +61,36 @@ assert "name: 911 GT3 RS" in md and "company: Porsche" in md
 assert "queries" not in md, "queries must not leak into car.md"
 # img-1 = best CLEAN match (u7); watermarked u0 (aura 9) and wrong car
 # u3 (aura 10) must both lose
-def pixels(b: bytes) -> bytes:
-    # workflow saves as JPEG (quality 92), so round-trip through the same
-    # lossy step before comparing - byte identity is otherwise impossible
+def source_jpeg(b: bytes) -> bytes:
+    # normalize a source image (PNG) to the same quality-92 JPEG the workflow
+    # writes, so the result compares byte-for-byte with a workflow output file
     im = Image.open(io.BytesIO(b)).convert("RGB")
     buf = io.BytesIO()
     im.save(buf, "JPEG", quality=92)
     return Image.open(io.BytesIO(buf.getvalue())).convert("RGB").tobytes()
 
 
+def actual_rgb(b: bytes) -> bytes:
+    # a workflow output is already JPEG; do NOT re-compress it here
+    return Image.open(io.BytesIO(b)).convert("RGB").tobytes()
+
+
 with open(os.path.join(out, "img-1.jpg"), "rb") as f:
-    assert pixels(f.read()) == pixels(MAP["u7"]), \
+    assert actual_rgb(f.read()) == source_jpeg(MAP["u7"]), \
         "img-1 must be the best clean match, not watermarked or wrong car"
 for n in range(1, 7):  # watermarked u0 / AI u1 appear nowhere in the output
     with open(os.path.join(out, f"img-{n}.jpg"), "rb") as f:
         b = f.read()
-    assert pixels(b) != pixels(MAP["u0"]), f"img-{n} is watermarked"
-    assert pixels(b) != pixels(MAP["u1"]), f"img-{n} is not a real photo"
+    assert actual_rgb(b) != source_jpeg(MAP["u0"]), f"img-{n} is watermarked"
+    assert actual_rgb(b) != source_jpeg(MAP["u1"]), f"img-{n} is not a real photo"
 side2 = Image.open(os.path.join(out, "img-2.jpg"))
 assert side2.size[1] / side2.size[0] >= 1.25, "img-2+ are portrait sides"
 with open(os.path.join(out, "img-2.jpg"), "rb") as f:
-    assert pixels(f.read()) == pixels(MAP["u4"]), \
+    assert actual_rgb(f.read()) == source_jpeg(MAP["u4"]), \
         "img-2 must be the first matching side angle"
 # fill picks matching u2 (aura 4), never wrong-car u3 (aura 10)
 with open(os.path.join(out, "img-5.jpg"), "rb") as f:
-    assert pixels(f.read()) == pixels(MAP["u2"]), \
+    assert actual_rgb(f.read()) == source_jpeg(MAP["u2"]), \
         "fill must prefer a matching car over the top-aura wrong car"
 assert os.path.exists(os.path.join(out, "car.gif")), "car.gif missing"
 shutil.rmtree(out, ignore_errors=True)

@@ -1,6 +1,6 @@
 """Vista Cars — a local Flask gallery for the car collector output.
 
-Reads every shoot under ./imgs/<date>/ (img-*.png + car.md) and every GIF under
+Reads every shoot under ./imgs/<date>/ (img-*.jpg + car.md) and every GIF under
 ./assets/, then serves an editorial photo archive.
 
 Run:

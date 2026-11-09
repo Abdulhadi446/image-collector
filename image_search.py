@@ -70,6 +70,8 @@ def assess(raw: bytes) -> tuple[int, bool] | None:
     w, h = img.size
     if w < 640 or h < 400:
         return None
-    if w / h > 3 or h / w > 2.2:  # reject extreme panoramas / strips
+    # Social-media friendly frame: between 4:5 portrait and 1.91:1 landscape.
+    ratio = w / h
+    if ratio < 4 / 5 or ratio > 1.91:
         return None
-    return _phash(img), h / w >= 1.25  # mobile-ratio (4:5 or taller)
+    return _phash(img), h / w >= 1.25  # portrait if taller than 1.25:1

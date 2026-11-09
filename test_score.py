@@ -22,7 +22,7 @@ def img(w: int, h: int, seed: int) -> bytes:
 
 
 land = img(800, 600, 1)
-port = img(720, 1280, 2)
+port = img(800, 1000, 1)  # 4:5 portrait (still portrait flag True)
 
 ph_l, portrait_l = assess(land)
 assert portrait_l is False, "landscape should not be portrait"
@@ -41,5 +41,7 @@ assert ph_l != ph_p, "different images differ"
 assert not is_dup(ph_p, [ph_l]), "different phash not dup"
 
 wide = img(2000, 500, 5)
-assert assess(wide) is None, "extreme panorama rejected"
-print("ok: assess + dedupe (no darkness gate, portrait flag)")
+assert assess(wide) is None, "2000x500 (4:1) outside 4:5..1.91:1"
+tall = img(400, 1000, 6)
+assert assess(tall) is None, "400x1000 (0.4) outside 4:5..1.91:1"
+print("ok: assess + dedupe (aspect ratio kept between 4:5 and 1.91:1)")

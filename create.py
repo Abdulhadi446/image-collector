@@ -113,7 +113,7 @@ def main() -> int:
             demo_paths = sorted(saved,
                                  key=lambda p: int(Path(p).stem.split("-")[1]))
             demo_out = BASE / "assets" / "demo.gif"
-            gif_n = workflow.make_gif(demo_paths, str(demo_out), 520, 720, 900)
+            gif_n = workflow.make_gif(demo_paths, str(demo_out), 520, 650, 900)
             if gif_n:
                 print(f"[done] refreshed {demo_out.relative_to(BASE)} "
                       f"({gif_n} frames) from this shoot")

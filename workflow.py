@@ -31,7 +31,7 @@ def _real(c: dict) -> bool:
     return bool(c.get("real", True))
 
 
-def make_gif(files: list[str], path: str, w: int = 520, h: int = 720,
+def make_gif(files: list[str], path: str, w: int = 520, h: int = 650,
              ms: int = 900) -> int:
     frames = []
     for f in files:
