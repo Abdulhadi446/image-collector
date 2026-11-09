@@ -15,7 +15,7 @@ import re
 from functools import lru_cache
 from pathlib import Path
 
-from flask import Flask, Response, abort, jsonify, render_template, request, send_from_directory, url_for
+from flask import Flask, Response, abort, jsonify, redirect, render_template, request, send_from_directory, url_for
 from PIL import Image
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -210,6 +210,11 @@ def load_shoot(date: str) -> dict | None:
     for shoot in load_shoots():
         if shoot["date"] == date:
             return shoot
+    # legacy URL without the hour suffix: /shoot/2026-11-08 ->
+    # the newest /shoot/2026-11-08-HH slot from that day
+    for shoot in load_shoots():
+        if shoot["date"].startswith(date + "-"):
+            return shoot
     return None
 
 
@@ -313,6 +318,8 @@ def shoot(date: str):
     found = load_shoot(date)
     if found is None:
         abort(404)
+    if found["date"] != date:  # old bare-date link -> canonical hour URL
+        return redirect(url_for("shoot", date=found["date"]), code=301)
     shoots = load_shoots()
     position = next(i for i, item in enumerate(shoots) if item["date"] == date)
     newer = shoots[position - 1] if position > 0 else None

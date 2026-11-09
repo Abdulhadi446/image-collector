@@ -6,8 +6,8 @@ A **LangGraph** agent that picks one car, hunts its photoshoot across the web, l
 
 | Hero (best aura, any ratio) | Side angles (mobile/portrait) |
 |---|---|
-| ![hero](imgs/2026-11-08/img-1.jpg) | ![side](imgs/2026-11-08/img-2.jpg) |
-| ![side](imgs/2026-11-08/img-5.jpg) | ![side](imgs/2026-11-08/img-8.jpg) |
+| ![hero](imgs/2026-11-08-20/img-1.jpg) | ![side](imgs/2026-11-08-20/img-2.jpg) |
+| ![side](imgs/2026-11-08-20/img-5.jpg) | ![side](imgs/2026-11-08-20/img-8.jpg) |
 
 > Every run is **one car, one shoot, zero duplicates, zero fakes** — perceptual hashing throws out repeats, and Gemma-4 rejects anything AI-generated, rendered or watermarked before it can be saved.
 
@@ -74,7 +74,7 @@ revoke it immediately in Ollama Cloud and create a replacement.
 Real run output (one example — cars vary between runs; this run fell back to the Supra):
 
 ```text
-Collecting 10 images of one car into ./imgs/2026-11-08/ ...
+Collecting 10 images of one car into ./imgs/2026-11-08-20/ ...
   planner car planning failed (empty answer); using fallback: Toyota Supra GR
 shoot: black Toyota Supra GR (A90 GR)
 [1/11] 'Toyota Supra A90 black photoshoot': 25 urls
@@ -88,16 +88,16 @@ rater (gemma4) scoring 68 images...
   note: only 2 matching portrait sides, filled to 10 with best remaining angles
   saved .../img-1.jpg  aura=9 side=True match=True real=True watermark=False
   ...
-  wrote imgs/2026-11-08/car.md
-  wrote imgs/2026-11-08/car.gif (10 frames)
-Done: 10/10 images in ./imgs/2026-11-08/
+  wrote imgs/2026-11-08-20/car.md
+  wrote imgs/2026-11-08-20/car.gif (10 frames)
+Done: 10/10 images in ./imgs/2026-11-08-20/
 ```
 
 ### Output layout
 
 ```text
 imgs/
-└── 2026-11-08/
+└── 2026-11-08-20/
     ├── img-1.jpg     ← hero shot: highest aura, any aspect ratio
     ├── img-2.jpg     ← side angles of the same car: portrait / mobile aspect first
     ├── ...

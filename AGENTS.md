@@ -26,7 +26,7 @@ Python LangGraph car-photo collector + a "Vista Cars" Flask gallery.
 
 ## Guardrails / gotchas
 - Use the `OLLAMA_API_KEY` from `.env`; don't leak it in code or logs. `planner` falls back to random pool if key missing or Ollama fails; `rater` degrades aura=0 + real=False.
-- `.gitignore` keeps all `imgs/*/` *except* `imgs/2026-11-08/` as the checked-in gallery. Generated runs land under `imgs/2026-11-07` etc and stay git-ignored.
+- `.gitignore` ignores only `imgs/test-day/` (offline fixture) plus job logs; shoot folders like `imgs/2026-11-08-20/` are tracked and pushed.
 - `assets/demo.gif` is rebuilt per `create.py`; pass `--no-demo` if you want the hero unchanged.
 - The `Read` tool may not show images in some model sessions — treat rater flags + PIL dimensional checks as truth, re-eyeball manually when needed.
 - Some test data files may be partial — use `test_graph.py` to validate behavior offline.

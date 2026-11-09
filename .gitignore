@@ -13,3 +13,6 @@ __pycache__/
 # Daily-job runtime noise
 cron-daily.log
 cron-daily.last
+
+# Offline test fixture shoots
+imgs/test-day/
