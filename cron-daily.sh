@@ -33,13 +33,18 @@ else
 fi
 echo "$DATE" > "$CACHE"
 
-# Ship the new shoot + hero GIF to the live gallery host (tests2 serves
-# vistacars.thetrillioniar.me from its own copy of this repo).
-if command -v rsync >/dev/null 2>&1 && ssh -o BatchMode=yes -o ConnectTimeout=8 tests2 true >/dev/null 2>&1; then
-    rsync -a "$REPO/imgs/$DATE" tests2:/home/ubuntu/image-collector/imgs/ && \
-    rsync -a "$REPO/assets/demo.gif" tests2:/home/ubuntu/image-collector/assets/ && \
-    echo "synced $DATE + demo.gif to tests2" || echo "WARN: tests2 sync failed"
+# Ship the new shoot + hero GIF to the live gallery host. When this script
+# runs ON tests2 (the server serving vistacars.thetrillioniar.me) there is
+# nothing to sync - the gallery reads ./imgs right here.
+if [ "$REPO" != "/home/ubuntu/image-collector" ]; then
+    if command -v rsync >/dev/null 2>&1 && ssh -o BatchMode=yes -o ConnectTimeout=8 tests2 true >/dev/null 2>&1; then
+        rsync -a "$REPO/imgs/$DATE" tests2:/home/ubuntu/image-collector/imgs/ && \
+        rsync -a "$REPO/assets/demo.gif" tests2:/home/ubuntu/image-collector/assets/ && \
+        echo "synced $DATE + demo.gif to tests2" || echo "WARN: tests2 sync failed"
+    else
+        echo "WARN: tests2 unreachable; images only on local + github"
+    fi
 else
-    echo "WARN: tests2 unreachable; images only on local + github"
+    echo "running on gallery host; no remote sync needed"
 fi
 echo "===== $(date) done $DATE ====="

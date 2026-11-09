@@ -9,3 +9,7 @@ __pycache__/
 .vscode/*
 !.vscode/settings.json
 .DS_Store
+
+# Daily-job runtime noise
+cron-daily.log
+cron-daily.last
