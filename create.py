@@ -29,14 +29,23 @@ if str(BASE) not in sys.path:
 
 
 def _date(s: str) -> str:
-    dt.date.fromisoformat(s)
-    return s
+    # YYYY-MM-DD (legacy) or YYYY-MM-DD-HH (several shoots per day)
+    for fmt in ("%Y-%m-%d", "%Y-%m-%d-%H"):
+        try:
+            dt.datetime.strptime(s, fmt)
+            return s
+        except ValueError:
+            continue
+    raise argparse.ArgumentTypeError(
+        f"{s!r} is not YYYY-MM-DD or YYYY-MM-DD-HH")
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(prog="create.py")
-    ap.add_argument("--date", type=_date, default=dt.date.today().isoformat(),
-                    metavar="YYYY-MM-DD", help="shoot date (default: today)")
+    ap.add_argument("--date", type=_date,
+                    default=dt.datetime.now().strftime("%Y-%m-%d-%H"),
+                    metavar="YYYY-MM-DD[-HH]",
+                    help="shoot slot (default: now, e.g. 2026-11-09-14)")
     ap.add_argument("--target", type=int, default=10,
                     help="number of images to save (default: 10)")
     ap.add_argument("--quiet", action="store_true", help="print only the final line")

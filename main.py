@@ -7,8 +7,8 @@ from workflow import build_graph
 
 def main() -> None:
     p = argparse.ArgumentParser(description="Aura car photoshoot collector (LangGraph + Gemini)")
-    p.add_argument("--date", default=datetime.date.today().isoformat(),
-                   help="output folder, YYYY-MM-DD (default: today)")
+    p.add_argument("--date", default=datetime.datetime.now().strftime("%Y-%m-%d-%H"),
+                   help="output folder, YYYY-MM-DD[-HH] (default: now)")
     p.add_argument("--target", type=int, default=10, help="images to keep (default: 10)")
     a = p.parse_args()
 

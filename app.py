@@ -96,10 +96,14 @@ def image_dims(path: Path) -> tuple[int, int]:
 
 
 def date_label(value: str) -> str:
-    try:
-        return dt.date.fromisoformat(value).strftime("%d %b %Y").upper()
-    except ValueError:
-        return value
+    # "2026-11-09" -> "09 NOV 2026"; "2026-11-09-14" -> "09 NOV 2026 · 14:00"
+    for fmt, out in (("%Y-%m-%d-%H", "%d %b %Y · %H:00"),
+                     ("%Y-%m-%d", "%d %b %Y")):
+        try:
+            return dt.datetime.strptime(value, fmt).strftime(out).upper()
+        except ValueError:
+            continue
+    return value
 
 
 def alt_text(car: dict, index: int) -> str:

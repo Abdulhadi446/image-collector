@@ -4,7 +4,7 @@ set -u
 REPO=$(cd "$(dirname "$0")" && pwd)
 cd "$REPO"
 LOG="${REPO}/cron-daily.log"
-DATE=$(date '+%Y-%m-%d')
+DATE=$(date '+%Y-%m-%d-%H')
 CACHE="$REPO/cron-daily.last"
 exec >>"$LOG" 2>&1
 echo "===== $(date) start $DATE ====="
