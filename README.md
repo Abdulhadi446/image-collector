@@ -157,6 +157,45 @@ sequenceDiagram
 | `test_score.py` | self-check: filters, dedupe, portrait flag |
 | `test_graph.py` | offline end-to-end graph test (monkeypatched network) |
 
+## Scheduled runs (production)
+
+The whole pipeline runs unattended on the **tests2** server, four times a day,
+so it works even with your laptop off:
+
+| Run slot (folder) | UTC | PKT |
+|---|---|---|
+| `imgs/YYYY-MM-DD-00` | 00:00 | 05:00 AM |
+| `imgs/YYYY-MM-DD-06` | 06:00 | 11:00 AM |
+| `imgs/YYYY-MM-DD-12` | 12:00 | 05:00 PM |
+| `imgs/YYYY-MM-DD-18` | 18:00 | 11:00 PM |
+
+Each slot gets its own folder, e.g. the 17:00 PKT run writes `imgs/2026-11-09-17/`.
+(+ up to 2 min random delay; `Persistent=true` catches missed slots after a reboot.)
+
+```mermaid
+graph LR
+    T[vistacars-daily.timer<br/>00/06/12/18 UTC] --> S[vistacars-daily.service]
+    S --> C[cron-daily.sh]
+    C --> R[create.py<br/>plan→harvest→rate→save]
+    R --> G[git add -A + imgs/&lt;slot&gt;<br/>git commit "Addimages for &lt;slot&gt;"<br/>git push origin master]
+    G --> A[Flask app on :5050<br/>vistacars-app.service]
+    A --> CF[cloudflared tunnel<br/>vistacars-tunnel.service]
+    CF --> W[https://vistacars.thetrillioniar.me]
+```
+
+On tests2 (systemd user units, `~/.config/systemd/user/`):
+
+```bash
+systemctl --user list-timers vistacars-daily.timer   # next 4 slots
+systemctl --user status vistacars-app vistacars-tunnel vistacars-daily.timer
+journalctl --user -u vistacars-daily.service -n 50   # last run's output
+# the script itself also appends to ~/image-collector/cron-daily.log
+```
+
+Old shoots are named with the hour too (`2026-11-08-20`); the bare-date URLs
+(`/shoot/2026-11-08`) 301-redirect to the newest hour slot of that day, so old
+links never break.
+
 ## Tests
 
 ```bash
@@ -166,7 +205,7 @@ sequenceDiagram
 
 ## Notes
 
-- Runs on your machine by default; production domain is documented in the Gallery web app section.
+- Runs unattended on the **tests2** server four times a day (see *Scheduled runs*); the production domain is documented in the Gallery web app section.
 - DuckDuckGo rate-limits aggressively: the harvest node sleeps between queries and retries on429s.
 - Not enough portrait shots? The saver fills the shortfall with the best remaining angles and prints a note, so you always get `--target` images.
 - **Real photos only**: Gemma-4 flags every candidate as `real` (photo) or not (AI / 3D render / video-game shot) and non-real images are dropped before saving; AI-art sites (civitai, midjourney, leonardo.ai, …) are also blocked at search time.
