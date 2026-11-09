@@ -1,0 +1,31 @@
+===== Mon Nov  9 11:01:01 AM PKT 2026 start 2026-11-09 =====
+[start] 2026-11-09 target=10 -> /home/abdulhadi/learnings/image-collector/imgs/2026-11-09
+shoot: Porsche 911 GT3 RS (992.1 RS, black)
+[1/11] 'Porsche 911 GT3 RS black photoshoot': 21 urls
+  accepted 17 candidates (target 10)
+[2/11] '911 GT3 RS night photography': 15 urls
+  accepted 30 candidates (target 10)
+[3/11] 'black 911 GT3 RS side profile': 21 urls
+  accepted 45 candidates (target 10)
+[4/11] '992 GT3 RS dark studio': 24 urls
+  accepted 68 candidates (target 10)
+[5/11] '911 GT3 RS moody wallpaper': 25 urls
+  accepted 86 candidates (target 10)
+rater (gemma4) scoring 86 images...
+  best aura=10 portrait=True side=False
+  dropped 32 AI-generated / rendered / non-real candidates
+  note: only 2 matching portrait sides, filled to 10 with best remaining angles
+  saved imgs/2026-11-09/img-1.jpg  aura=9 side=False match=True real=True watermark=False https://wallpapercat.com/w/full/7/c/b/2325428-1707x2560-mobile-hd-porsche-911-gt
+  saved imgs/2026-11-09/img-2.jpg  aura=7 side=True match=True real=True watermark=False https://preview.redd.it/black-911-gt3-rs-with-pyro-red-accents-and-wheels-in-v0-
+  saved imgs/2026-11-09/img-3.jpg  aura=8 side=False match=True real=True watermark=False https://preview.redd.it/black-911-gt3-rs-with-pyro-red-accents-and-wheels-in-v0-
+  saved imgs/2026-11-09/img-4.jpg  aura=8 side=True match=True real=True watermark=False https://www.carpaints.co/src/Frontend/Files/Cache/photoswipe_max_size/src/Fronte
+  saved imgs/2026-11-09/img-5.jpg  aura=8 side=True match=True real=True watermark=False https://wallpapers.com/images/hd/porsche-g-t3-r-s-night-shoot-6npz4igfaknapi7l.j
+  saved imgs/2026-11-09/img-6.jpg  aura=7 side=True match=True real=True watermark=False https://i.ytimg.com/vi/IQlqm5lNqQE/maxresdefault.jpg?sqp=-oaymwEmCIAKENAF8quKqQM
+  saved imgs/2026-11-09/img-7.jpg  aura=7 side=True match=True real=True watermark=False https://www.carpaints.co/src/Frontend/Files/MediaLibrary/14/370676861-8388219413
+  saved imgs/2026-11-09/img-8.jpg  aura=7 side=True match=True real=True watermark=False https://www.carpaints.co/src/Frontend/Files/Cache/photoswipe_max_size/src/Fronte
+  saved imgs/2026-11-09/img-9.jpg  aura=7 side=True match=True real=True watermark=False https://pbs.twimg.com/media/HCfd-68W4AAT4FE.jpg
+  saved imgs/2026-11-09/img-10.jpg  aura=6 side=True match=True real=True watermark=False https://media.rpmtechnik.co.uk/wp-content/uploads/2025/10/992-GT3RS-MR-23-1600x1
+  wrote imgs/2026-11-09/car.md
+  wrote imgs/2026-11-09/car.gif (10 frames)
+[done] date=2026-11-09 saved=10/10 in 118.2s -> /home/abdulhadi/learnings/image-collector/imgs/2026-11-09
+[done] refreshed assets/demo.gif (10 frames) from this shoot
