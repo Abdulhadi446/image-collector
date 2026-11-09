@@ -1,27 +1,38 @@
-"""Client for sodeom.com public APIs. Text-only agent brain (no vision)."""
+"""Plan one car per day from the 5-car fallback pool via Ollama beam.
+
+The previous sodeom.com/ai proxy was too flaky (empty/truncated JSON) and is
+no longer used.  We instead ask Ollama model ``beam`` for one index only.
+"""
 from __future__ import annotations
 
 import json
+import os
 import random
 import re
-import sys
-import time
 from pathlib import Path
 
 import requests
 
-BASE = Path(__file__).resolve().parent
-if str(BASE) not in sys.path:
-    sys.path.insert(0, str(BASE))
-try:
-    import rater
-except Exception as _e:  # noqa: BLE001
-    rater = None
-
-
 URL = "https://ollama.com/v1/chat/completions"
-MODEL = "gemma4"
-KEY = (rater._load_key() if rater is not None else "")
+MODEL = "beam"
+
+KEY = None
+
+
+def _load_key() -> str:
+    if v := os.environ.get("OLLAMA_API_KEY"):
+        return v
+    try:
+        with open(Path(__file__).resolve().parent / ".env") as f:
+            for line in f:
+                if line.startswith("OLLAMA_API_KEY="):
+                    return line.split("=", 1)[1].strip().strip("'\"")
+    except OSError:
+        pass
+    return ""
+
+
+KEY = _load_key()
 
 
 def _ask(prompt: str, max_tokens: int = 50) -> str:
@@ -152,11 +163,11 @@ _CATALOG_LABELS = (
 
 
 def plan_car() -> dict:
-    """Ask sodeom to pick ONE car index by 1-5; queries come from our pool."""
+    """Ask Ollama beam for ONE car index 1-5; queries come from our pool."""
     prompt = (
-        "Pick ONE number 1-5 for a moody night-street aura car photoshoot; "
-        "vary between calls. Cars: " + _CATALOG_LABELS + ". "
-        "Reply ONLY JSON no prose: {\"i\": int}. No examples, short answer."
+        "Pick ONE number 1-5 for a moody night-street car aura photoshoot. "
+        "Reply ONLY JSON, no prose: {\"i\": int}. Cars: "
+        + _CATALOG_LABELS
     )
     try:
         raw = _parse_json(_ask(prompt, max_tokens=50))
@@ -166,6 +177,6 @@ def plan_car() -> dict:
         return dict(FALLBACK_CARS[i - 1])
     except Exception as e:
         car = random.choice(FALLBACK_CARS)
-        print(f"  sodeom /ai car planning failed ({e}); using fallback: "
+        print(f"  ollama /ai car planning failed ({e}); using fallback: "
               f"{car['company']} {car['name']}")
         return dict(car)

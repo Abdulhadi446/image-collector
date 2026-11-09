@@ -98,13 +98,9 @@ def route(state: State) -> str:
 
 def rate(state: State) -> dict:
     cands = state["found"]
-    print(f"rater (gemma4) scoring {len(cands)} images...")
+    print(f"rating {len(cands)} candidates (neutral, no external classification)...")
     ratings = rater.rate(state["car"], [c["raw"] for c in cands])
     rated = [{**c, **r} for c, r in zip(cands, ratings)]
-    best = max(rated, key=lambda x: x["aura"]) if rated else None
-    if best:
-        print(f"  best aura={best['aura']} portrait={best['portrait']} "
-              f"side={best['side']}")
     return {"rated": rated}
 
 
