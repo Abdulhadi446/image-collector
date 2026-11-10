@@ -6,7 +6,7 @@ Python LangGraph car-photo collector + a "Vista Cars" Flask gallery.
 - Full shoot: `.venv/bin/python create.py --date YYYY-MM-DD --target 10` (writes `./imgs/<date>/img-*.jpg`, `car.md`, `car.gif`; refreshes `assets/demo.gif`).
 - Skip when already downloaded: `.venv/bin/python create.py --date YYYY-MM-DD --skip-if-exists --quiet`.
 - Gallery server: `.venv/bin/python app.py --port 5000`.
-- Setup: `.venv/bin/pip install -r requirements.txt`, with `OLLAMA_API_KEY` in `.env`.
+- Setup: `.venv/bin/pip install -r requirements.txt`, with `OPENROUTER_API_KEY` in `.env`.
 - Unattended (tests2, systemd user): `vistacars-daily.timer` runs `cron-daily.sh` at 00/06/12/18 UTC (4 slots/day, each writes `imgs/YYYY-MM-DD-HH/`). Local fallback timer (Asia/Karachi) same 4 UTC slots.">
 
 ## Tests
@@ -19,16 +19,16 @@ Python LangGraph car-photo collector + a "Vista Cars" Flask gallery.
 - Production entrypoint: `create.py` (paths resolve relative to file location, chdir to base; do not use cwd assumptions).
 - `main.py` is a thin alias to the same workflow and still supported.
 - Graph in `workflow.py`: `plan` → `harvest` → `route` (portrait-aware, target based) → `rate` → `save` -> generates `car.md` and `car.gif`, and returns `saved` paths.
-- `planner.py`: selects one car from the 5-key `FALLBACK_CARS` pool **without** sodeom.com's unreliable proxy — uses Ollama model `beam` with a minimal `{"i": int}` JSON prompt; falls back to `random.choice` on empty/truncated/timeout (2 retries, 10s each).
+- `planner.py`: selects one car from the 13-car `FALLBACK_CARS` pool via OpenRouter `openrouter/free` with a minimal `{"i": int}` JSON prompt; **refuses any car already present in `imgs/*/car.md`** (forces a random un-shot car instead) and dedupes the pool; falls back to `random.choice` on empty/truncated/timeout.
 - `image_search.py`: DuckDuckGo search, download (UA, 15s, 25MB cap), min 640x400, extreme-ratio reject, `WATERMARKED` blocklist (watermark + selected AI-site domains), `is_dup` per phash hamming distance ≤ 4. No darkness gate; `assess` returns `(phash, is_portrait≥1.25)`.
-- `rater.py`: Gemma-4 via Ollama (768px JPEG q=80) scoring `aura/side/match/watermark/real`, batches = 6, 2 retries; fallback dicts use aura=0/False all keys.
+- `rater.py`: neutral stub — returns default ratings with **no network call** (image classification was removed).
 - `app.py`: Flask Vista gallery — reads `./imgs/<date>` and `./assets/*.gif` except `demo.gif` for the motion page.
 
 ## Guardrails / gotchas
-- Use the `OLLAMA_API_KEY` from `.env`; don't leak it in code or logs. `planner` falls back to random pool if key missing or Ollama fails; `rater` degrades aura=0 + real=False.
+- Use the `OPENROUTER_API_KEY` from `.env`; don't leak it in code or logs. `planner` falls back to a random *un-shot* car if the key is missing or OpenRouter fails; `rater` is a no-op.
 - `.gitignore` ignores only `imgs/test-day/` (offline fixture) plus job logs; shoot folders like `imgs/2026-11-08-20/` are tracked and pushed.
 - `assets/demo.gif` is rebuilt per `create.py`; pass `--no-demo` if you want the hero unchanged.
-- The `Read` tool may not show images in some model sessions — treat rater flags + PIL dimensional checks as truth, re-eyeball manually when needed.
+- The `Read` tool may not show images in some model sessions — treat PIL dimensional checks as truth, re-eyeball manually when needed (there are no rater flags anymore).
 - Some test data files may be partial — use `test_graph.py` to validate behavior offline.
 - No human-in-the-loop anymore; user asked to remove it and accept \"let it go\" false positives.
 

@@ -2,25 +2,25 @@
 
 # Car Aura Collector
 
-A **LangGraph** agent that picks one car, hunts its photoshoot across the web, lets **Gemma-4 (Ollama Cloud)** rank every candidate by *aura*, and writes the best 10 as `./imgs/{date}/img-{n}.jpg`, a `car.md` spec sheet and a looping `car.gif` of the whole set.
+A **LangGraph** agent that picks a car it has *not* shot yet, hunts its photoshoot across the web, and writes the best 10 as `./imgs/{date}/img-{n}.jpg`, a `car.md` spec sheet and a looping `car.gif` of the whole set.
 
 | Hero (best aura, any ratio) | Side angles (mobile/portrait) |
 |---|---|
 | ![hero](imgs/2026-11-08-20/img-1.jpg) | ![side](imgs/2026-11-08-20/img-2.jpg) |
 | ![side](imgs/2026-11-08-20/img-5.jpg) | ![side](imgs/2026-11-08-20/img-8.jpg) |
 
-> Every run is **one car, one shoot, zero duplicates, zero fakes** — perceptual hashing throws out repeats, and Gemma-4 rejects anything AI-generated, rendered or watermarked before it can be saved.
+> Every run is **one car, one shoot, zero duplicate cars** — perceptual hashing throws out repeat images, and the planner refuses to re-shoot any car that already exists in `imgs/`.
 
 ## How it works
 
 ```mermaid
 flowchart TD
-    START([main.py]) --> plan["🤖 plan<br/>beam (Ollama) picks ONE car<br/>+ shoot queries"]
+    START([main.py]) --> plan["🤖 plan<br/>OpenRouter openrouter/free picks ONE<br/>un-shot car + shoot queries"]
     plan --> harvest["🔍 harvest<br/>ddgs image search → download 8-way parallel<br/>filter: min 640px, no watermarks, phash dedupe"]
     harvest --> route{"enough<br/>PORTRAIT<br/>candidates?"}
     route -- "no, more queries left" --> advance["➡️ next query"] --> harvest
-    route -- "yes / queries out" --> rate["🧠 rate<br/>Gemma-4 scores each image<br/>aura 0–10 + side + match + watermark + real"]
-    rate --> save["💾 save<br/>img-1 = hero (best matching real photo, top aura)<br/>img-2..n = portrait side angles of the same car<br/>+ car.md + car.gif"]
+    route -- "yes / queries out" --> rate["🏷 rate (neutral)<br/>no external classification —<br/>portrait flag + defaults only"]
+    rate --> save["💾 save<br/>img-1 = hero (first accepted candidate)<br/>img-2..n = portrait sides, rest fills<br/>+ car.md + car.gif"]
     save --> END([./imgs/date/])
 ```
 
@@ -34,8 +34,8 @@ flowchart LR
     C -- no --> X
     C -- yes --> D{phash within<br/>4 bits of a<br/>kept image?}
     D -- yes --> X
-    D -- no --> E[Gemma-4:<br/>aura + side + match<br/>+ watermark + real?]
-    E --> F[non-real (AI/render) dropped<br/>hero = max aura, match first<br/>sides = portrait first<br/>watermarked sink to the back]
+    D -- no --> E[neutral rating:<br/>no external classifier]
+    E --> F[hero = first accepted candidate<br/>sides = portrait first<br/>rest fill the remaining slots]
     F --> G[imgs/date/img-n.jpg<br/>+ car.md + car.gif]
 ```
 
@@ -47,16 +47,16 @@ python -m venv .venv
 .venv/bin/pip install -r requirements.txt   # langgraph, ddgs, requests, pillow
 ```
 
-No API keys are required for image search (DuckDuckGo). Planning and rating use Ollama Cloud.
+No API keys are required for image search (DuckDuckGo). Planning uses OpenRouter's free model tier.
 Create a local `.env` from the included template, or export the variable in your shell:
 
 ```bash
 cp .env.example .env
-# edit .env and set OLLAMA_API_KEY
+# edit .env and set OPENROUTER_API_KEY
 ```
 
 Never commit `.env` or paste a real API key into source files. If a key is exposed,
-revoke it immediately in Ollama Cloud and create a replacement.
+revoke it immediately in OpenRouter and create a replacement.
 
 ## Usage
 
@@ -125,23 +125,21 @@ description: Track-focused 911 with a huge swan-neck rear wing.
 
 | Stage | Who | What it decides |
 |---|---|---|
-| **Plan** | Ollama Cloud `beam` (`/v1/chat/completions`) | which car to shoot + its search queries |
+| **Plan** | OpenRouter `openrouter/free` (`/v1/chat/completions`) | which car to shoot + its search queries; re-picks if the model returns an already-shot car |
 | **Harvest** | DuckDuckGo (`ddgs`) | which images exist, which are big enough / clean / not duplicates |
-| **Rate** | Gemma-4 via Ollama Cloud (`/v1/chat/completions`) | `aura` (0–10), side angle, same-car `match`, burned-in `watermark`, and `real` (rejects AI/renders/video-game shots) |
+| **Rate** | none (neutral stub) | no external classification — only the local portrait flag is used |
 
 ```mermaid
 sequenceDiagram
     participant M as main.py
-    participant P as beam (Ollama)
+    participant P as openrouter/free
     participant D as ddgs
-    participant G as Gemma-4 (Ollama)
-    M->>P: pick one car + queries
+    M->>P: pick one un-shot car + queries
     loop each query
         M->>D: search + download
         D-->>M: candidates (deduped)
     end
-    M->>G: rate every candidate (batched)
-    G-->>M: aura + side + match + watermark + real flags
+    M->>M: neutral ratings (portrait flag only)
     M->>M: write img-1..n + car.md + car.gif
 ```
 
@@ -151,9 +149,9 @@ sequenceDiagram
 |---|---|
 | `main.py` | CLI entry (`--date`, `--target`) |
 | `workflow.py` | LangGraph `StateGraph`: plan → harvest → rate → save (`img-*.jpg` + `car.md` + `car.gif`) |
-| `planner.py` | car planner using Ollama model `beam` (5-car random fallback pool on failure) |
+| `planner.py` | car planner using OpenRouter `openrouter/free` (13-car pool, refuses to re-shoot a car already in `imgs/`; random fallback on failure) |
 | `image_search.py` | ddgs search, download, quality filters, watermark + AI-site blocklist, perceptual-hash dedupe |
-| `rater.py` | Gemma-4 vision scoring (aura + side-angle + same-car match + watermark + real-photo flags), batched with retries |
+| `rater.py` | neutral rating stub — no external AI image classification |
 | `test_score.py` | self-check: filters, dedupe, portrait flag |
 | `test_graph.py` | offline end-to-end graph test (monkeypatched network) |
 
