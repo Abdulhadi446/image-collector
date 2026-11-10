@@ -16,38 +16,63 @@ import requests
 URL = "https://ollama.com/v1/chat/completions"
 MODEL = "beam"
 
-KEY = None
+# Keys tried in order: primary first, then fallback.  Each is tried until one
+# returns a usable response, so a revoked primary key does not kill the run.
+KEY_ORDER = ("OLLAMA_API_KEY", "OLLAMA_API_KEY_FALLBACK")
 
 
-def _load_key() -> str:
-    if v := os.environ.get("OLLAMA_API_KEY"):
-        return v
+def _load_env() -> dict:
+    """Process env merged with `KEY=value` lines from .env next to this file."""
+    env = dict(os.environ)
     try:
         with open(Path(__file__).resolve().parent / ".env") as f:
             for line in f:
-                if line.startswith("OLLAMA_API_KEY="):
-                    return line.split("=", 1)[1].strip().strip("'\"")
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, _, v = line.partition("=")
+                env.setdefault(k.strip(), v.strip().strip("'\""))
     except OSError:
         pass
-    return ""
+    return env
 
 
-KEY = _load_key()
+def _load_keys() -> list[str]:
+    env = _load_env()
+    keys = []
+    for name in KEY_ORDER:
+        if v := (env.get(name) or "").strip().strip("'\""):
+            if v not in keys:
+                keys.append(v)
+    return keys
+
+
+KEYS = _load_keys()
+KEY = KEYS[0] if KEYS else None
 
 
 def _ask(prompt: str, max_tokens: int = 50) -> str:
-    if not KEY:
-        raise RuntimeError("no OLLAMA_API_KEY")
-    r = requests.post(
-        URL,
-        headers={"Authorization": f"Bearer {KEY}",
-                 "Content-Type": "application/json"},
-        json={"model": MODEL, "messages": [{"role": "user", "content": prompt}],
-              "temperature": 0.9, "max_tokens": max_tokens},
-        timeout=30,
-    )
-    r.raise_for_status()
-    return str(r.json()["choices"][0]["message"]["content"]).strip()
+    if not KEYS:
+        raise RuntimeError("no OLLAMA_API_KEY (or fallback) configured")
+    last_err: Exception | None = None
+    for key in KEYS:
+        try:
+            r = requests.post(
+                URL,
+                headers={"Authorization": f"Bearer {key}",
+                         "Content-Type": "application/json"},
+                json={"model": MODEL,
+                      "messages": [{"role": "user", "content": prompt}],
+                      "temperature": 0.9, "max_tokens": max_tokens},
+                timeout=30,
+            )
+            r.raise_for_status()
+            return str(r.json()["choices"][0]["message"]["content"]).strip()
+        except Exception as e:  # noqa: BLE001 - try next key
+            last_err = e
+            print(f"  ollama key failed ({type(e).__name__}: {e}); "
+                  f"trying fallback ({len(KEYS) - KEYS.index(key) - 1} left)")
+    raise last_err if last_err else RuntimeError("no usable OLLAMA key")
 FALLBACK_CARS = [
     {
         "name": "911 GT3 RS", "company": "Porsche", "version": "992.1", "variant": "RS",
