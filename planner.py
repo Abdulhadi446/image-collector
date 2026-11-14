@@ -13,6 +13,7 @@ import time
 from pathlib import Path
 
 import requests
+from ddgs import DDGS
 
 URL = "https://openrouter.ai/api/v1/chat/completions"
 MODEL = "openrouter/free"
@@ -50,6 +51,18 @@ def _load_keys() -> list[str]:
 
 KEYS = _load_keys()
 KEY = KEYS[0] if KEYS else None
+
+
+def search_web(query: str, max_results: int = 5) -> list[dict]:
+    """DuckDuckGo instant answer / web search for factual grounding.
+
+    Returns a list of dicts with keys: title, href, body.
+    """
+    try:
+        return list(DDGS().text(query, max_results=max_results))
+    except Exception as e:  # noqa: BLE001
+        print(f"  web search failed for {query!r}: {e}")
+        return []
 
 
 def _ask(prompt: str, max_tokens: int = 300, tries: int = 4) -> str:
@@ -600,6 +613,9 @@ def plan_car() -> dict:
       (up to 5 rounds) rather than quietly forcing a pick;
     * the API is unreachable / out of credit / returns nothing usable ->
       raise, so the run quits loudly instead of guessing.
+
+    Before asking, we fetch fresh web snippets for the *available* cars so the
+    model has current specs/pricing instead of relying on training memory.
     """
     pool = _dedupe_pool(FALLBACK_CARS)
     used = _used_keys()
@@ -610,10 +626,23 @@ def plan_car() -> dict:
             f"exist under imgs/ - add new cars before the next run"
         )
 
+    # Ground the model with live web context for each available car.
+    snippets = []
+    for c in available:
+        label = " ".join(str(c.get(k) or "") for k in ("company", "name", "variant")).strip()
+        q = f"{c.get('year','')} {label} specifications horsepower price"
+        hits = search_web(q, max_results=3)
+        if hits:
+            snippet = "; ".join(h.get("body", "")[:200] for h in hits if h.get("body"))
+            if snippet:
+                snippets.append(f"{label}: {snippet}")
+    context = "\n".join(snippets) if snippets else ""
+
     prompt = (
         "Pick ONE number 1-%d for a moody night-street car aura photoshoot. "
-        "Reply ONLY JSON, no prose: {\"i\": int}. Cars: %s"
-        % (len(available), _labels(available))
+        "Reply ONLY JSON, no prose: {\"i\": int}. Cars: %s\n\n"
+        "Current web specs (for your reference):\n%s"
+        % (len(available), _labels(available), context)
     )
     for round_no in range(1, 6):
         try:
@@ -649,15 +678,30 @@ def fun_fact(car: dict, tries: int = 5) -> str:
 
     Non-fatal by design: a missing fun fact must never abort a shoot that
     already has its images.
+
+    We first search the web for a surprising fact, then ask the model to
+    condense it into a single sentence.
     """
     label = " ".join(
         str(car.get(k) or "") for k in ("company", "name", "variant")
     ).strip()
     year = str(car.get("year") or "").strip()
+
+    # Ground with a live web search for surprising/unique facts.
+    q = f"{year} {label} surprising fact little known"
+    hits = search_web(q, max_results=4)
+    context = ""
+    if hits:
+        bodies = [h.get("body", "")[:300] for h in hits if h.get("body")]
+        if bodies:
+            context = "\n".join(bodies)
+
     prompt = (
         f'Write ONE surprising true fun fact about the {year} {label}. '
         f'Max 22 words. Reply ONLY JSON, no prose: {{"fact": "..."}}.'
     )
+    if context:
+        prompt = f"Web context:\n{context}\n\n{prompt}"
     try:
         # 900 is not padding: the routed free models burn several hundred
         # tokens reasoning before emitting, and below ~900 they return
