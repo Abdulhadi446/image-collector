@@ -630,7 +630,8 @@ def plan_car() -> dict:
     snippets = []
     for c in available:
         label = " ".join(str(c.get(k) or "") for k in ("company", "name", "variant")).strip()
-        q = f"{c.get('year','')} {label} specifications horsepower price"
+        year = str(c.get("year") or "").strip()
+        q = f"{year} {label} specifications"
         hits = search_web(q, max_results=3)
         if hits:
             snippet = "; ".join(h.get("body", "")[:200] for h in hits if h.get("body"))
@@ -688,7 +689,7 @@ def fun_fact(car: dict, tries: int = 5) -> str:
     year = str(car.get("year") or "").strip()
 
     # Ground with a live web search for surprising/unique facts.
-    q = f"{year} {label} surprising fact little known"
+    q = f"{year} {label} interesting fact"
     hits = search_web(q, max_results=4)
     context = ""
     if hits:
