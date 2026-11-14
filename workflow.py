@@ -181,27 +181,27 @@ def save(state: State) -> dict:
     if len(pool) < len(state["rated"]):
         print(f"  dropped {len(state['rated']) - len(pool)} "
               "AI-generated / rendered / non-real candidates")
-    # match first: a different car never wins on aura alone; watermarked last
+    # Sort pool: watermarked last, then by match/aura (legacy AI rating;
+    # with neutral rater all aura=0/match=True so this falls back to pool order)
     pool.sort(key=lambda x: (bool(x.get("watermark")),
-                             not x.get("match", True), -x["aura"]))
+                             not x.get("match", True), -x.get("aura", 0)))
     keep: list[dict] = []
     if pool:
-        hero = pool[0]  # img-1: best-matching aura shot, any ratio
+        hero = pool[0]  # img-1: best match, any ratio
         keep.append(hero)
         rest = pool[1:]
-        sides = [c for c in rest
-                 if c["portrait"] and c.get("match", True)]
-        sides.sort(key=lambda x: (bool(x.get("watermark")),
-                                  not x["side"], -x["aura"]))  # real side angles first
+        # Prioritize portrait (side-angle) images for the remaining slots
+        sides = [c for c in rest if c.get("portrait") and c.get("match", True)]
+        sides.sort(key=lambda x: (bool(x.get("watermark")), -x.get("aura", 0)))
         keep += sides[: state["target"] - 1]
-        if len(keep) < state["target"]:  # scarce matching portraits: fill, best left
+        if len(keep) < state["target"]:  # fill with best remaining
             used = {c["url"] for c in keep}
             fill = [c for c in rest if c["url"] not in used]
             fill.sort(key=lambda x: (bool(x.get("watermark")),
                                      not x.get("match", True),
-                                     not x["side"], -x["aura"]))
+                                     -x.get("aura", 0)))
             keep += fill[: state["target"] - len(keep)]
-            print(f"  note: only {len(sides)} matching portrait sides, "
+            print(f"  note: only {len(sides)} portrait sides, "
                   f"filled to {len(keep)} with best remaining angles")
     paths = []
     for n, item in enumerate(keep, 1):
