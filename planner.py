@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import os
-import random
 import re
 import time
 from pathlib import Path
@@ -592,13 +591,15 @@ def _parse_json(txt: str):
 
 
 def plan_car() -> dict:
-    """Pick a car, never repeating one that already exists in ``imgs/``.
+    """Ask the model for a car; re-ask while it repeats one we already shot.
 
-    Hard guarantee: the model is only ever shown the *not-yet-shot* cars, and
-    both the model path and the forced-random path draw from that same
-    ``available`` list.  ``available`` is checked non-empty up front, so there
-    is no code path that can return an already-shot car.  If the pool runs dry
-    we raise instead of silently re-shooting.
+    There is **no random fallback**.  Only two outcomes:
+
+    * the model returns a car that is not already in ``imgs/`` -> use it;
+      if it returns a used car or nonsense, the model is asked again
+      (up to 5 rounds) rather than quietly forcing a pick;
+    * the API is unreachable / out of credit / returns nothing usable ->
+      raise, so the run quits loudly instead of guessing.
     """
     pool = _dedupe_pool(FALLBACK_CARS)
     used = _used_keys()
@@ -614,18 +615,62 @@ def plan_car() -> dict:
         "Reply ONLY JSON, no prose: {\"i\": int}. Cars: %s"
         % (len(available), _labels(available))
     )
+    for round_no in range(1, 6):
+        try:
+            raw = _parse_json(_ask(prompt, max_tokens=300))
+        except Exception as e:  # noqa: BLE001 - model/API is down: quit
+            raise RuntimeError(
+                f"openrouter unreachable after retries ({type(e).__name__}: "
+                f"{e}); quitting instead of guessing a car"
+            ) from e
+        try:
+            if not isinstance(raw, dict) or not isinstance(raw.get("i"), int):
+                raise ValueError(f"model did not reply with an int: {raw!r}")
+            i = raw["i"]
+            if not 1 <= i <= len(available):
+                raise ValueError(
+                    f"index {i} out of range 1-{len(available)}")
+            car = available[i - 1]
+            # Belt and braces: available holds no used cars, but never trust it.
+            if _car_key(car) in used:
+                raise ValueError(
+                    f"already shot: {car['company']} {car['name']}")
+            return dict(car)
+        except Exception as e:  # noqa: BLE001 - bad pick: ask the model again
+            print(f"  car pick rejected (round {round_no}/5): {e}; "
+                  f"re-asking the model")
+    raise RuntimeError(
+        "model failed to name an un-shot car in 5 rounds; quitting"
+    )
+
+
+def fun_fact(car: dict, tries: int = 3) -> str:
+    """One surprising fact about ``car`` from the model, or ``''`` if it can't.
+
+    Non-fatal by design: a missing fun fact must never abort a shoot that
+    already has its images.
+    """
+    label = " ".join(
+        str(car.get(k) or "") for k in ("company", "name", "variant")
+    ).strip()
+    year = str(car.get("year") or "").strip()
+    prompt = (
+        f"Write ONE surprising true fun fact about the {year} {label}. "
+        "Max 22 words. Reply with the fact ONLY: no preamble, no quotes, "
+        "no 'Fun fact:' label, no emoji."
+    )
     try:
-        raw = _parse_json(_ask(prompt, max_tokens=300))
-        assert isinstance(raw, dict) and isinstance(raw.get("i"), int)
-        i = raw.get("i")
-        assert 1 <= i <= len(available)
-        car = available[i - 1]
-        # Belt and braces: available holds no used cars, but never trust it.
-        if _car_key(car) in used:
-            raise ValueError(f"already shot: {car['company']} {car['name']}")
-    except Exception as e:
-        car = random.choice(available)
-        print(f"  car pick rejected ({e}); forcing a different car: "
-              f"{car['company']} {car['name']}")
-        return dict(car)
-    return dict(car)
+        # 900 is not padding: the routed free models burn several hundred
+        # tokens reasoning before emitting, and below ~900 they return
+        # content: null (the plan_car JSON prompt happens to fit in 300).
+        txt = _ask(prompt, max_tokens=900, tries=tries)
+    except Exception as e:  # noqa: BLE001 - decoration is optional
+        print(f"  fun fact skipped ({type(e).__name__}: {e})")
+        return ""
+    txt = " ".join(txt.split()).strip().strip("\"'").strip()
+    txt = re.sub(r"^(fun\s*fact\s*[:\-–—]\s*)", "", txt, flags=re.I).strip()
+    if not txt:
+        return ""
+    if len(txt) > 220:
+        txt = txt[:217].rsplit(" ", 1)[0] + "..."
+    return txt

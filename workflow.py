@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from io import BytesIO
 from typing import TypedDict
 
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from langgraph.graph import END, START, StateGraph
 
 import image_search as ims
@@ -47,6 +47,75 @@ def make_gif(files: list[str], path: str, w: int = 520, h: int = 650,
     frames[0].save(path, save_all=True, append_images=frames[1:],
                    duration=ms, loop=0)
     return len(frames)
+
+
+# Deliberately list a few distros' paths: tests2 is Ubuntu (DejaVu), the
+# dev box ships Noto.  Anything missing falls back to PIL's built-in font.
+FONT_CANDIDATES = (
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    "/usr/share/fonts/noto/NotoSans-Bold.ttf",
+    "/usr/share/fonts/noto/NotoSans-Regular.ttf",
+)
+
+
+def _caption_font(size: int):
+    for p in FONT_CANDIDATES:
+        if os.path.exists(p):
+            try:
+                return ImageFont.truetype(p, size)
+            except OSError:
+                continue
+    return ImageFont.load_default()
+
+
+def _wrap(text: str, font, max_w: int) -> list[str]:
+    lines, cur = [], ""
+    for word in text.split():
+        trial = f"{cur} {word}".strip()
+        if not cur or font.getlength(trial) <= max_w:
+            cur = trial
+        else:
+            lines.append(cur)
+            cur = word
+    if cur:
+        lines.append(cur)
+    return lines
+
+
+def caption(path: str, text: str, max_lines: int = 3) -> bool:
+    """Burn a semi-transparent bar with ``text`` into the bottom of ``path``.
+
+    Rewrites the file in place as JPEG.  Returns False (leaving the photo
+    untouched) when there is nothing to write or the bar would eat the shot.
+    """
+    if not text:
+        return False
+    try:
+        im = Image.open(path).convert("RGB")
+    except OSError:
+        return False
+    w, h = im.size
+    size = max(12, int(w * 0.034))
+    font = _caption_font(size)
+    pad = max(8, int(w * 0.024))
+    lines = _wrap(text, font, w - 2 * pad)[:max_lines]
+    if not lines:
+        return False
+    lh = int(size * 1.34)
+    bar_h = lh * len(lines) + 2 * pad
+    if bar_h > h * 0.45:  # never let the caption swallow the photo
+        return False
+    overlay = Image.new("RGBA", im.size, (0, 0, 0, 0))
+    d = ImageDraw.Draw(overlay)
+    d.rectangle([0, h - bar_h, w, h], fill=(0, 0, 0, 170))
+    y = h - bar_h + pad
+    for ln in lines:
+        d.text((pad, y), ln, font=font, fill=(255, 255, 255, 245))
+        y += lh
+    Image.alpha_composite(im.convert("RGBA"), overlay).convert("RGB").save(
+        path, "JPEG", quality=92)
+    return True
 
 
 def plan(state: State) -> dict:
@@ -151,6 +220,10 @@ def save(state: State) -> dict:
     with open(md_path, "w") as f:
         f.write("\n".join(md_lines) + "\n")
     print(f"  wrote {md_path}")
+    # Fun fact burned into the hero shot (img-1) as a bottom caption bar.
+    fact = planner.fun_fact(car) if paths else ""
+    if fact and caption(paths[0], fact):
+        print(f"  fun fact on {paths[0]}: {fact}")
     gif_path = os.path.join(out, "car.gif")
     n = make_gif(paths, gif_path)
     if n:

@@ -20,7 +20,7 @@ flowchart TD
     harvest --> route{"enough<br/>PORTRAIT<br/>candidates?"}
     route -- "no, more queries left" --> advance["➡️ next query"] --> harvest
     route -- "yes / queries out" --> rate["🏷 rate (neutral)<br/>no external classification —<br/>portrait flag + defaults only"]
-    rate --> save["💾 save<br/>img-1 = hero (first accepted candidate)<br/>img-2..n = portrait sides, rest fills<br/>+ car.md + car.gif"]
+    rate --> save["💾 save<br/>img-1 = hero (first accepted candidate)<br/>+ fun-fact caption bar burned in<br/>img-2..n = portrait sides, rest fills<br/>+ car.md + car.gif"]
     save --> END([./imgs/date/])
 ```
 
@@ -149,7 +149,7 @@ sequenceDiagram
 |---|---|
 | `main.py` | CLI entry (`--date`, `--target`) |
 | `workflow.py` | LangGraph `StateGraph`: plan → harvest → rate → save (`img-*.jpg` + `car.md` + `car.gif`) |
-| `planner.py` | car planner using OpenRouter `openrouter/free` (13-car pool, refuses to re-shoot a car already in `imgs/`; random fallback on failure) |
+| `planner.py` | car planner using OpenRouter `openrouter/free` (13-car pool, refuses to re-shoot a car already in `imgs/`; re-asks the model on a duplicate pick, quits if the API is down — no random fallback). Also `fun_fact(car)` for the hero caption. |
 | `image_search.py` | ddgs search, download, quality filters, watermark + AI-site blocklist, perceptual-hash dedupe |
 | `rater.py` | neutral rating stub — no external AI image classification |
 | `test_score.py` | self-check: filters, dedupe, portrait flag |

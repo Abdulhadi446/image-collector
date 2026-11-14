@@ -18,8 +18,8 @@ Python LangGraph car-photo collector + a "Vista Cars" Flask gallery.
 ## Build / project map
 - Production entrypoint: `create.py` (paths resolve relative to file location, chdir to base; do not use cwd assumptions).
 - `main.py` is a thin alias to the same workflow and still supported.
-- Graph in `workflow.py`: `plan` → `harvest` → `route` (portrait-aware, target based) → `rate` → `save` -> generates `car.md` and `car.gif`, and returns `saved` paths.
-- `planner.py`: selects one car from the 13-car `FALLBACK_CARS` pool via OpenRouter `openrouter/free` with a minimal `{"i": int}` JSON prompt; **refuses any car already present in `imgs/*/car.md`** (forces a random un-shot car instead) and dedupes the pool; falls back to `random.choice` on empty/truncated/timeout.
+- Graph in `workflow.py`: `plan` → `harvest` → `route` (portrait-aware, target based) → `rate` → `save` -> generates `car.md` and `car.gif`, and returns `saved` paths. `save` also burns the planner's fun fact into `img-1.jpg` via `workflow.caption` (semi-transparent bottom bar, DejaVu/Noto font, ≤3 wrapped lines; skipped if the fact is empty).
+- `planner.py`: selects one car from the 13-car `FALLBACK_CARS` pool via OpenRouter `openrouter/free` with a minimal `{"i": int}` JSON prompt; **refuses any car already present in `imgs/*/car.md`** (re-asks the model up to 5 rounds instead of forcing a pick — there is NO random fallback, so a dead API makes the run quit) and dedupes the pool; also `fun_fact(car)` returns one-line trivia for the hero caption (needs `max_tokens=900` or the routed model replies `content: null`).
 - `image_search.py`: DuckDuckGo search, download (UA, 15s, 25MB cap), min 640x400, extreme-ratio reject, `WATERMARKED` blocklist (watermark + selected AI-site domains), `is_dup` per phash hamming distance ≤ 4. No darkness gate; `assess` returns `(phash, is_portrait≥1.25)`.
 - `rater.py`: neutral stub — returns default ratings with **no network call** (image classification was removed).
 - `app.py`: Flask Vista gallery — reads `./imgs/<date>` and `./assets/*.gif` except `demo.gif` for the motion page.

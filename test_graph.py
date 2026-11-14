@@ -8,6 +8,7 @@ from PIL import Image, ImageDraw
 import image_search as ims
 import rater
 import planner
+import workflow
 from workflow import build_graph
 
 CAR = {"name": "911 GT3 RS", "company": "Porsche", "version": "992.1",
@@ -33,6 +34,13 @@ MAP = {f"u{i}": img(800, 600, i + 1) for i in range(4)}       # landscape heroes
 MAP.update({f"u{4 + i}": img(768, 960, i + 10) for i in range(6)})  # portrait sides (4:5)
 
 planner.plan_car = lambda: CAR
+FUNFACT = "Fun fact: the test fixture never calls the network for captions."
+planner.fun_fact = lambda car, tries=2: FUNFACT
+# record the caption instead of rewriting img-1, so the byte-identity
+# assertions below still compare a pristine workflow output
+CAPTIONED: list[tuple[str, str]] = []
+workflow.caption = lambda path, text, **kw: (
+    CAPTIONED.append((path, text)), True)[1]
 ims.search_images = lambda q, max_results=25: list(MAP)
 ims.download = lambda url: MAP[url]
 # wrong cars u3/u6/u9: u3 has the global top aura 10 but match=False;
@@ -78,6 +86,8 @@ def actual_rgb(b: bytes) -> bytes:
 with open(os.path.join(out, "img-1.jpg"), "rb") as f:
     assert actual_rgb(f.read()) == source_jpeg(MAP["u7"]), \
         "img-1 must be the best clean match, not watermarked or wrong car"
+assert CAPTIONED == [(os.path.join(out, "img-1.jpg"), FUNFACT)], \
+    "fun fact must be burned into img-1 (and only img-1)"
 for n in range(1, 7):  # watermarked u0 / AI u1 appear nowhere in the output
     with open(os.path.join(out, f"img-{n}.jpg"), "rb") as f:
         b = f.read()
