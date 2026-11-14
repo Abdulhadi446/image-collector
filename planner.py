@@ -1278,11 +1278,8 @@ def fun_fact(car: dict, tries: int = 5) -> str:
 
     prompt = (
         f"Write ONE surprising true fun fact about the {year} {label}. "
-        f"Max 22 words. Reply ONLY FACT, no prose, noting else."
+        f'Max 22 words. Reply ONLY JSON, no prose: {{"fact": "..."}}.'
     )
-
-    # f'Max 22 words. Reply ONLY JSON, no prose: {{"fact": "..."}}.'
-
     if context:
         prompt = f"Web context:\n{context}\n\n{prompt}"
     try:
@@ -1295,6 +1292,13 @@ def fun_fact(car: dict, tries: int = 5) -> str:
     except Exception as e:  # noqa: BLE001 - decoration is optional
         print(f"  fun fact skipped ({type(e).__name__}: {e})")
         txt = ""
+    # Extract fact from JSON response if present.
+    try:
+        parsed = json.loads(txt)
+        if isinstance(parsed, dict) and isinstance(parsed.get("fact"), str):
+            txt = parsed["fact"]
+    except json.JSONDecodeError:
+        pass
     txt = " ".join(txt.split()).strip().strip("\"'").strip()
     txt = re.sub(r"^(fun\s*fact\s*[:\-–—]\s*)", "", txt, flags=re.I).strip()
     if not txt:
