@@ -644,7 +644,7 @@ def plan_car() -> dict:
     )
 
 
-def fun_fact(car: dict, tries: int = 3) -> str:
+def fun_fact(car: dict, tries: int = 5) -> str:
     """One surprising fact about ``car`` from the model, or ``''`` if it can't.
 
     Non-fatal by design: a missing fun fact must never abort a shoot that
@@ -655,20 +655,26 @@ def fun_fact(car: dict, tries: int = 3) -> str:
     ).strip()
     year = str(car.get("year") or "").strip()
     prompt = (
-        f"Write ONE surprising true fun fact about the {year} {label}. "
-        "Max 22 words. Reply with the fact ONLY: no preamble, no quotes, "
-        "no 'Fun fact:' label, no emoji."
+        f'Write ONE surprising true fun fact about the {year} {label}. '
+        f'Max 22 words. Reply ONLY JSON, no prose: {{"fact": "..."}}.'
     )
     try:
         # 900 is not padding: the routed free models burn several hundred
         # tokens reasoning before emitting, and below ~900 they return
         # content: null (the plan_car JSON prompt happens to fit in 300).
+        # tries=5 because openrouter/free re-routes to a different model on
+        # every request, so more attempts = more chances of a clean answer.
         txt = _ask(prompt, max_tokens=900, tries=tries)
     except Exception as e:  # noqa: BLE001 - decoration is optional
         print(f"  fun fact skipped ({type(e).__name__}: {e})")
-        return ""
+        txt = ""
     txt = " ".join(txt.split()).strip().strip("\"'").strip()
     txt = re.sub(r"^(fun\s*fact\s*[:\-–—]\s*)", "", txt, flags=re.I).strip()
+    if not txt:
+        # The routed free models return content: null often enough that the
+        # caption would be missing half the time. Fall back to the car's own
+        # one-line description so img-1 always gets a bar.
+        txt = str(car.get("description") or "").strip()
     if not txt:
         return ""
     if len(txt) > 220:
