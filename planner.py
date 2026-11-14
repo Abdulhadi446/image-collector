@@ -10,6 +10,7 @@ import json
 import os
 import random
 import re
+import time
 from pathlib import Path
 
 import requests
@@ -52,29 +53,43 @@ KEYS = _load_keys()
 KEY = KEYS[0] if KEYS else None
 
 
-def _ask(prompt: str, max_tokens: int = 50) -> str:
+def _ask(prompt: str, max_tokens: int = 300, tries: int = 4) -> str:
+    """One completion, retried.
+
+    The free ``openrouter/free`` route hands back ``content: null`` whenever
+    the routed model spends its whole token budget on reasoning.  ``str(None)``
+    used to become the literal text ``"None"``, which then failed JSON parsing
+    and silently dropped us onto a random car.  Treat empty/null content as a
+    failure so it is retried instead of being forwarded as an answer.
+    """
     if not KEYS:
         raise RuntimeError("no OPENROUTER_API_KEY (or fallback) configured")
     last_err: Exception | None = None
-    for key in KEYS:
-        try:
-            r = requests.post(
-                URL,
-                headers={"Authorization": f"Bearer {key}",
-                         "Content-Type": "application/json",
-                         "HTTP-Referer": "https://vistacars.thetrillioniar.me",
-                         "X-Title": "Vista Cars planner"},
-                json={"model": MODEL,
-                      "messages": [{"role": "user", "content": prompt}],
-                      "temperature": 0.9, "max_tokens": max_tokens},
-                timeout=30,
-            )
-            r.raise_for_status()
-            return str(r.json()["choices"][0]["message"]["content"]).strip()
-        except Exception as e:  # noqa: BLE001 - try next key
-            last_err = e
-            print(f"  openrouter key failed ({type(e).__name__}: {e}); "
-                  f"trying fallback ({len(KEYS) - KEYS.index(key) - 1} left)")
+    for attempt in range(tries):
+        for key in KEYS:
+            try:
+                r = requests.post(
+                    URL,
+                    headers={"Authorization": f"Bearer {key}",
+                             "Content-Type": "application/json",
+                             "HTTP-Referer": "https://vistacars.thetrillioniar.me",
+                             "X-Title": "Vista Cars planner"},
+                    json={"model": MODEL,
+                          "messages": [{"role": "user", "content": prompt}],
+                          "temperature": 0.9, "max_tokens": max_tokens},
+                    timeout=45,
+                )
+                r.raise_for_status()
+                choices = r.json().get("choices") or [{}]
+                content = (choices[0].get("message") or {}).get("content")
+                if not isinstance(content, str) or not content.strip():
+                    raise ValueError("null/empty content from model")
+                return content.strip()
+            except Exception as e:  # noqa: BLE001 - try next key / retry
+                last_err = e
+                print(f"  openrouter attempt {attempt + 1}/{tries} failed "
+                      f"({type(e).__name__}: {e})")
+        time.sleep(1.5)
     raise last_err if last_err else RuntimeError("no usable OPENROUTER key")
 FALLBACK_CARS = [
     {
@@ -259,6 +274,244 @@ FALLBACK_CARS = [
             "black Nissan Silvia 9:16 wallpaper",
         ],
     },
+    {
+        "name": "Skyline GT-R R34", "company": "Nissan", "version": "BNR34", "variant": "V-Spec II",
+        "color": "black", "year": "2002", "engine": "2.6L twin-turbo inline-six RB26DETT",
+        "power": "280 hp", "drivetrain": "AWD, 6-speed manual",
+        "description": "Godzilla's most iconic generation, gran turismo royalty.",
+        "queries": [
+            "Nissan Skyline GT-R R34 black photoshoot", "R34 GT-R night photography",
+            "black R34 side profile", "BNR34 GT-R dark studio",
+            "R34 GT-R moody wallpaper", "GT-R R34 black rear night",
+            "Nissan Skyline R34 street night", "R34 underground parking",
+            "Skyline GT-R R34 vertical wallpaper", "R34 phone wallpaper portrait",
+            "black Nissan Skyline R34 9:16 wallpaper",
+        ],
+    },
+    {
+        "name": "NSX", "company": "Honda", "version": "NA2", "variant": "Type S",
+        "color": "black", "year": "2002", "engine": "3.2L V6 C32B",
+        "power": "290 hp", "drivetrain": "RWD, 6-speed manual",
+        "description": "Mid-engine Honda that redefined the supercar playbook.",
+        "queries": [
+            "Honda NSX black photoshoot", "Acura NSX night photography",
+            "black NSX side profile", "Honda NSX dark studio",
+            "NSX moody wallpaper", "NSX black rear night",
+            "Honda NSX street night", "NSX underground parking",
+            "NSX vertical wallpaper", "NSX phone wallpaper portrait",
+            "black Honda NSX 9:16 wallpaper",
+        ],
+    },
+    {
+        "name": "WRX STI", "company": "Subaru", "version": "VA", "variant": "STI",
+        "color": "black", "year": "2019", "engine": "2.5L turbo flat-four EJ257",
+        "power": "310 hp", "drivetrain": "AWD, 6-speed manual",
+        "description": "Rally-bred sedan with a hood scoop and a wing.",
+        "queries": [
+            "Subaru WRX STI black photoshoot", "WRX STI night photography",
+            "black WRX side profile", "Subaru WRX dark studio",
+            "WRX STI moody wallpaper", "WRX black rear night",
+            "Subaru WRX street night", "WRX underground parking",
+            "WRX STI vertical wallpaper", "WRX phone wallpaper portrait",
+            "black Subaru WRX 9:16 wallpaper",
+        ],
+    },
+    {
+        "name": "Lancer Evo IX", "company": "Mitsubishi", "version": "CT9A", "variant": "MR",
+        "color": "black", "year": "2006", "engine": "2.0L turbo inline-four 4G63",
+        "power": "286 hp", "drivetrain": "AWD, 5-speed manual",
+        "description": "Final evolution of the 4G63 rally weapon.",
+        "queries": [
+            "Mitsubishi Lancer Evo IX black photoshoot", "Lancer Evo night photography",
+            "black Evo IX side profile", "Mitsubishi Lancer dark studio",
+            "Lancer Evo IX moody wallpaper", "Evo black rear night",
+            "Mitsubishi Evo street night", "Lancer underground parking",
+            "Lancer Evo IX vertical wallpaper", "Evo phone wallpaper portrait",
+            "black Mitsubishi Lancer 9:16 wallpaper",
+        ],
+    },
+    {
+        "name": "911 Turbo S", "company": "Porsche", "version": "992", "variant": "Turbo S",
+        "color": "black", "year": "2024", "engine": "3.8L twin-turbo flat-six",
+        "power": "640 hp", "drivetrain": "AWD, 8-speed PDK",
+        "description": "All-weather missile that defies physics out of corners.",
+        "queries": [
+            "Porsche 911 Turbo S black photoshoot", "992 Turbo S night photography",
+            "black 911 Turbo side profile", "Porsche 911 dark studio",
+            "911 Turbo S moody wallpaper", "Turbo S black rear night",
+            "Porsche 911 street night", "911 Turbo underground parking",
+            "911 Turbo S vertical wallpaper", "911 phone wallpaper portrait",
+            "black Porsche 911 Turbo 9:16 wallpaper",
+        ],
+    },
+    {
+        "name": "488 Pista", "company": "Ferrari", "version": "F142M", "variant": "Pista",
+        "color": "black", "year": "2019", "engine": "3.9L twin-turbo V8",
+        "power": "710 hp", "drivetrain": "RWD, 7-speed DCT",
+        "description": "Track-focused Ferrari with razor aero and no compromise.",
+        "queries": [
+            "Ferrari 488 Pista black photoshoot", "488 Pista night photography",
+            "black Ferrari 488 side profile", "Ferrari 488 dark studio",
+            "488 Pista moody wallpaper", "Ferrari black rear night",
+            "Ferrari 488 street night", "488 underground parking",
+            "488 Pista vertical wallpaper", "Ferrari phone wallpaper portrait",
+            "black Ferrari 488 9:16 wallpaper",
+        ],
+    },
+    {
+        "name": "Vantage", "company": "Aston Martin", "version": "V8", "variant": "AMR",
+        "color": "black", "year": "2022", "engine": "4.0L twin-turbo V8",
+        "power": "503 hp", "drivetrain": "RWD, 8-speed automatic",
+        "description": "British grand tourer with a predator's stance.",
+        "queries": [
+            "Aston Martin Vantage black photoshoot", "Vantage night photography",
+            "black Aston Martin side profile", "Aston Martin dark studio",
+            "Vantage moody wallpaper", "Vantage black rear night",
+            "Aston Martin street night", "Vantage underground parking",
+            "Aston Martin Vantage vertical wallpaper", "Vantage phone wallpaper portrait",
+            "black Aston Martin 9:16 wallpaper",
+        ],
+    },
+    {
+        "name": "RS 6 Avant", "company": "Audi", "version": "C8", "variant": "Performance",
+        "color": "black", "year": "2023", "engine": "4.0L twin-turbo V8",
+        "power": "621 hp", "drivetrain": "AWD, 8-speed automatic",
+        "description": "Supercar speed hidden in a family wagon body.",
+        "queries": [
+            "Audi RS6 Avant black photoshoot", "RS6 night photography",
+            "black Audi RS6 side profile", "Audi RS6 dark studio",
+            "RS6 Avant moody wallpaper", "RS6 black rear night",
+            "Audi RS6 street night", "RS6 underground parking",
+            "RS6 Avant vertical wallpaper", "Audi RS6 phone wallpaper portrait",
+            "black Audi RS6 9:16 wallpaper",
+        ],
+    },
+    {
+        "name": "M2 Competition", "company": "BMW", "version": "F87", "variant": "Competition",
+        "color": "black", "year": "2020", "engine": "3.0L twin-turbo inline-six S55",
+        "power": "405 hp", "drivetrain": "RWD, 7-speed DCT",
+        "description": "Short-wheelbase coupe that loves to be sideways.",
+        "queries": [
+            "BMW M2 Competition black photoshoot", "F87 M2 night photography",
+            "black BMW M2 side profile", "BMW M2 dark studio",
+            "M2 Competition moody wallpaper", "M2 black rear night",
+            "BMW M2 street night", "M2 underground parking",
+            "BMW M2 vertical wallpaper", "M2 Competition phone wallpaper portrait",
+            "black BMW M2 9:16 wallpaper",
+        ],
+    },
+    {
+        "name": "Camaro ZL1", "company": "Chevrolet", "version": "6th gen", "variant": "ZL1",
+        "color": "black", "year": "2022", "engine": "6.2L supercharged V8 LT4",
+        "power": "650 hp", "drivetrain": "RWD, 10-speed automatic",
+        "description": "Muscle car with track-bred aero and brutal grip.",
+        "queries": [
+            "Chevrolet Camaro ZL1 black photoshoot", "Camaro ZL1 night photography",
+            "black Camaro side profile", "Chevrolet Camaro dark studio",
+            "Camaro ZL1 moody wallpaper", "Camaro black rear night",
+            "Chevrolet Camaro street night", "Camaro underground parking",
+            "Camaro ZL1 vertical wallpaper", "Camaro phone wallpaper portrait",
+            "black Chevrolet Camaro 9:16 wallpaper",
+        ],
+    },
+    {
+        "name": "Challenger SRT Hellcat", "company": "Dodge", "version": "LD", "variant": "Hellcat",
+        "color": "black", "year": "2023", "engine": "6.2L supercharged V8 HEMI",
+        "power": "717 hp", "drivetrain": "RWD, 8-speed automatic",
+        "description": "Heavyweight brute with a supercharger whine.",
+        "queries": [
+            "Dodge Challenger Hellcat black photoshoot", "Challenger Hellcat night photography",
+            "black Challenger side profile", "Dodge Challenger dark studio",
+            "Challenger Hellcat moody wallpaper", "Hellcat black rear night",
+            "Dodge Challenger street night", "Challenger underground parking",
+            "Challenger Hellcat vertical wallpaper", "Challenger phone wallpaper portrait",
+            "black Dodge Challenger 9:16 wallpaper",
+        ],
+    },
+    {
+        "name": "F-Type SVR", "company": "Jaguar", "version": "X152", "variant": "SVR",
+        "color": "black", "year": "2017", "engine": "5.0L supercharged V8",
+        "power": "575 hp", "drivetrain": "AWD, 8-speed automatic",
+        "description": "Last of the big supercharged Jaguar cats.",
+        "queries": [
+            "Jaguar F-Type SVR black photoshoot", "F-Type night photography",
+            "black Jaguar F-Type side profile", "Jaguar F-Type dark studio",
+            "F-Type SVR moody wallpaper", "F-Type black rear night",
+            "Jaguar F-Type street night", "F-Type underground parking",
+            "F-Type SVR vertical wallpaper", "F-Type phone wallpaper portrait",
+            "black Jaguar F-Type 9:16 wallpaper",
+        ],
+    },
+    {
+        "name": "MX-5 Miata", "company": "Mazda", "version": "ND", "variant": "RF",
+        "color": "black", "year": "2023", "engine": "2.0L Skyactiv-G inline-four",
+        "power": "181 hp", "drivetrain": "RWD, 6-speed manual",
+        "description": "Lightweight targa roadster built for pure feel.",
+        "queries": [
+            "Mazda MX-5 Miata black photoshoot", "Miata ND night photography",
+            "black Miata side profile", "Mazda MX-5 dark studio",
+            "MX-5 Miata moody wallpaper", "Miata black rear night",
+            "Mazda Miata street night", "Miata underground parking",
+            "MX-5 Miata vertical wallpaper", "Miata phone wallpaper portrait",
+            "black Mazda Miata 9:16 wallpaper",
+        ],
+    },
+    {
+        "name": "Mustang GT", "company": "Ford", "version": "S650", "variant": "GT",
+        "color": "black", "year": "2024", "engine": "5.0L Coyote V8",
+        "power": "480 hp", "drivetrain": "RWD, 10-speed automatic",
+        "description": "The original pony car, still naturally aspirated.",
+        "queries": [
+            "Ford Mustang GT black photoshoot", "Mustang GT night photography",
+            "black Mustang side profile", "Ford Mustang dark studio",
+            "Mustang GT moody wallpaper", "Mustang black rear night",
+            "Ford Mustang street night", "Mustang underground parking",
+            "Mustang GT vertical wallpaper", "Mustang phone wallpaper portrait",
+            "black Ford Mustang 9:16 wallpaper",
+        ],
+    },
+    {
+        "name": "370Z", "company": "Nissan", "version": "Z34", "variant": "Nismo",
+        "color": "black", "year": "2020", "engine": "3.7L V6 VQ37VHR",
+        "power": "350 hp", "drivetrain": "RWD, 7-speed automatic",
+        "description": "Long-bonnet Z-car with a wide, planted stance.",
+        "queries": [
+            "Nissan 370Z black photoshoot", "370Z Nismo night photography",
+            "black 370Z side profile", "Nissan 370Z dark studio",
+            "370Z moody wallpaper", "370Z black rear night",
+            "Nissan 370Z street night", "370Z underground parking",
+            "370Z vertical wallpaper", "370Z phone wallpaper portrait",
+            "black Nissan 370Z 9:16 wallpaper",
+        ],
+    },
+    {
+        "name": "BRZ", "company": "Subaru", "version": "ZD8", "variant": "tS",
+        "color": "black", "year": "2023", "engine": "2.4L flat-four FA24",
+        "power": "228 hp", "drivetrain": "RWD, 6-speed manual",
+        "description": "Low, light rear-drive coupe with perfect balance.",
+        "queries": [
+            "Subaru BRZ black photoshoot", "BRZ night photography",
+            "black BRZ side profile", "Subaru BRZ dark studio",
+            "BRZ moody wallpaper", "BRZ black rear night",
+            "Subaru BRZ street night", "BRZ underground parking",
+            "BRZ vertical wallpaper", "BRZ phone wallpaper portrait",
+            "black Subaru BRZ 9:16 wallpaper",
+        ],
+    },
+    {
+        "name": "GR Yaris", "company": "Toyota", "version": "GXPA16", "variant": "Circuit",
+        "color": "black", "year": "2023", "engine": "1.6L turbo inline-three G16E-GTS",
+        "power": "257 hp", "drivetrain": "AWD, 6-speed manual",
+        "description": "Homologation special built for rally stages.",
+        "queries": [
+            "Toyota GR Yaris black photoshoot", "GR Yaris night photography",
+            "black GR Yaris side profile", "Toyota GR Yaris dark studio",
+            "GR Yaris moody wallpaper", "GR Yaris black rear night",
+            "Toyota Yaris street night", "GR Yaris underground parking",
+            "GR Yaris vertical wallpaper", "GR Yaris phone wallpaper portrait",
+            "black Toyota GR Yaris 9:16 wallpaper",
+        ],
+    },
 ]
 
 
@@ -287,6 +540,7 @@ def _used_keys() -> set[tuple[str, str]]:
         name = company = ""
         try:
             for line in md.read_text(encoding="utf-8", errors="ignore").splitlines():
+                line = line.strip()
                 if line.startswith("name:"):
                     name = line.split(":", 1)[1].strip()
                 elif line.startswith("company:"):
@@ -334,31 +588,39 @@ def _parse_json(txt: str):
             return json.loads(txt + ("}" * n))
         except json.JSONDecodeError:
             continue
-    raise ValueError("invalid JSON from sodeom")
+    raise ValueError("invalid JSON from model")
 
 
 def plan_car() -> dict:
     """Pick a car, never repeating one that already exists in ``imgs/``.
 
-    The model is shown the whole pool.  If it returns an index for a car we
-    have already shot (or an out-of-range/invalid index), we force a random
-    car from the not-yet-shot remainder instead.
+    Hard guarantee: the model is only ever shown the *not-yet-shot* cars, and
+    both the model path and the forced-random path draw from that same
+    ``available`` list.  ``available`` is checked non-empty up front, so there
+    is no code path that can return an already-shot car.  If the pool runs dry
+    we raise instead of silently re-shooting.
     """
     pool = _dedupe_pool(FALLBACK_CARS)
     used = _used_keys()
-    available = [c for c in pool if _car_key(c) not in used] or pool
+    available = [c for c in pool if _car_key(c) not in used]
+    if not available:
+        raise RuntimeError(
+            f"car pool exhausted: all {len(pool)} cars in FALLBACK_CARS already "
+            f"exist under imgs/ - add new cars before the next run"
+        )
 
     prompt = (
         "Pick ONE number 1-%d for a moody night-street car aura photoshoot. "
         "Reply ONLY JSON, no prose: {\"i\": int}. Cars: %s"
-        % (len(pool), _labels(pool))
+        % (len(available), _labels(available))
     )
     try:
         raw = _parse_json(_ask(prompt, max_tokens=300))
         assert isinstance(raw, dict) and isinstance(raw.get("i"), int)
         i = raw.get("i")
-        assert 1 <= i <= len(pool)
-        car = pool[i - 1]
+        assert 1 <= i <= len(available)
+        car = available[i - 1]
+        # Belt and braces: available holds no used cars, but never trust it.
         if _car_key(car) in used:
             raise ValueError(f"already shot: {car['company']} {car['name']}")
     except Exception as e:
